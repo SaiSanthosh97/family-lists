@@ -130,3 +130,12 @@ public partial class JoinPage : ContentPage
         BindingContext = viewModel;
     }
 }
+
+public partial class ImportPage : VaultPage
+{
+    public ImportPage(ImportViewModel viewModel)
+    {
+        InitializeComponent();
+        BindingContext = viewModel;
+    }
+}

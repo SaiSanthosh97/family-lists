@@ -13,5 +13,6 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("bill", typeof(BillPage));
         Routing.RegisterRoute("spending", typeof(SpendingPage));
         Routing.RegisterRoute("join", typeof(JoinPage));
+        Routing.RegisterRoute("import", typeof(ImportPage));
     }
 }

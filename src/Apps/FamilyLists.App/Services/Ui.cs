@@ -47,6 +47,36 @@ public static class Nav
 
     public static Task BillAsync(string billId) => GoAsync($"bill?id={Uri.EscapeDataString(billId)}");
 
+    private static bool _openingImport;
+
+    /// <summary>
+    /// Opens Import for a shared note, once: both the share itself and the Lists screen (after a cold start) ask.
+    /// If Import is already showing, it takes the new note instead.
+    /// </summary>
+    public static Task ImportAsync() => MainThread.InvokeOnMainThreadAsync(async () =>
+    {
+        if (Shell.Current?.CurrentPage is Views.ImportPage { BindingContext: ViewModels.ImportViewModel open })
+        {
+            open.TakeShared();
+            return;
+        }
+
+        if (_openingImport || Shell.Current is null)
+        {
+            return;
+        }
+
+        _openingImport = true;
+        try
+        {
+            await Shell.Current.GoToAsync("import");
+        }
+        finally
+        {
+            _openingImport = false;
+        }
+    });
+
     public static Task SpendingAsync(string listId, string? period = null) =>
         GoAsync($"spending?list={Uri.EscapeDataString(listId)}" + (period is null ? "" : $"&period={period}"));
 }

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<views:VaultPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:FamilyLists.App.Views"
+             xmlns:vm="clr-namespace:FamilyLists.App.ViewModels"
+             x:Class="FamilyLists.App.Views.ImportPage"
+             x:DataType="vm:ImportViewModel"
+             Title="Import a note">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,8,16,24" Spacing="10">
+                <Label Text="From Google Keep or Samsung Notes: open the note, tap Share, and choose Family Lists. Or copy the note and paste it here." Style="{StaticResource Subtle}" />
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Label Text="The note" Style="{StaticResource SectionLabel}" VerticalOptions="End" />
+                    <Button Grid.Column="1" Text="Paste" Command="{Binding PasteCommand}" Style="{StaticResource LinkButton}" />
+                </Grid>
+                <Border Style="{StaticResource Card}" Padding="8,2">
+                    <Editor Text="{Binding NoteText}" Placeholder="Milk&#10;3 onions&#10;Basmati rice 5kg" AutoSize="TextChanges" MinimumHeightRequest="110" MaximumHeightRequest="220" />
+                </Border>
+
+                <Label Text="Add to" Style="{StaticResource SectionLabel}" Margin="0,6,0,0" />
+                <Picker ItemsSource="{Binding Targets}" ItemDisplayBinding="{Binding Label, x:DataType=vm:ImportTarget}" SelectedIndex="{Binding TargetIndex}" Title="Choose a list" />
+                <Label Text="A monthly list gets the items in its open month (or this month's, started for you)." Style="{StaticResource Subtle}" FontSize="14" />
+
+                <VerticalStackLayout IsVisible="{Binding HasLines}" Spacing="8" Margin="0,6,0,0">
+                    <Label Text="Items: untick what you don't want" Style="{StaticResource SectionLabel}" />
+                    <Border Style="{StaticResource Card}" Padding="4">
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rows}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ImportRow">
+                                    <Grid ColumnDefinitions="52,*,Auto" Padding="0,2" MinimumHeightRequest="52">
+                                        <CheckBox IsChecked="{Binding Picked}" Color="{StaticResource Primary}" VerticalOptions="Center" HorizontalOptions="Center" />
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="0">
+                                            <Label Text="{Binding Name}" />
+                                            <Label Text="{Binding Detail}" Style="{StaticResource Subtle}" FontSize="14" IsVisible="{Binding Detail, Converter={StaticResource NotEmpty}}" />
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="2" Text="{Binding Qty}" Style="{StaticResource Subtle}" VerticalOptions="Center" Margin="0,0,8,0" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Button Grid.Row="1" Text="{Binding AddText}" Command="{Binding AddCommand}" IsEnabled="{Binding CanAdd}" Margin="16,8,16,12" />
+    </Grid>
+</views:VaultPage>

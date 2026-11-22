@@ -55,6 +55,8 @@ public static class MauiProgram
         services.AddTransient<SpendingPage>();
         services.AddTransient<JoinViewModel>();
         services.AddTransient<JoinPage>();
+        services.AddTransient<ImportViewModel>();
+        services.AddTransient<ImportPage>();
 
         var app = builder.Build();
         BillReading.CleanUp();

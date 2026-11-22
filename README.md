@@ -8,6 +8,7 @@ A shared grocery and to-do app for a household. Lists live **on your phones**, s
 - **Spending is optional.** You get monthly totals, a breakdown per product and price history. No bill? Type the total in, or type a price on an item.
 - **Groups.** Invite by QR code in person, or send an invite text and approve the request after comparing a 6-digit safety code. One phone can be in several groups, and groups can't read each other's data (each has its own key). Removing someone changes the group's key.
 - **To-do lists**, shared inside the same group.
+- **Import from Google Keep, Samsung Notes or any notes app.** Share the note to Family Lists, or copy and paste it. Checkboxes and bullets are cleaned up, quantities read, and you choose which list the items go on.
 
 **Download:** [latest release](https://github.com/SaiSanthosh97/family-lists/releases/latest) (Android 8.0+). Install the `.apk`; later versions are offered in **Settings → Check for updates**.
 

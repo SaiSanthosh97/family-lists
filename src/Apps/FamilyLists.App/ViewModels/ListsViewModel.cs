@@ -92,7 +92,16 @@ public sealed partial class ListsViewModel(VaultHost host, AppSettings settings,
 
         NoMonthly = Monthly.Count == 0;
         NoTodos = Todos.Count == 0;
+
+        // A note shared while the app was closed: open Import now that the data is ready.
+        if (Inbox.HasNote && !Waiting)
+        {
+            await Nav.ImportAsync();
+        }
     }
+
+    [RelayCommand]
+    private Task ImportAsync() => Nav.ImportAsync();
 
     private async Task<(string, Color)> MonthStatusAsync(string listId, string now)
     {

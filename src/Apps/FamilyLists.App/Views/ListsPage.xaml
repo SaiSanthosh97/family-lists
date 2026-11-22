@@ -78,6 +78,8 @@
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </VerticalStackLayout>
+
+                    <Button Text="Import a note (Keep, Samsung Notes…)" Command="{Binding ImportCommand}" Style="{StaticResource OutlineButton}" Margin="0,18,0,0" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>

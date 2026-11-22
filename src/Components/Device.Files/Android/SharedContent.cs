@@ -31,9 +31,16 @@ public static class SharedContent
             }
         }
 
-        // Shared text (an SMS, an email body) when no file came with it.
+        // Shared text (a note, an SMS, an email body) when no file came with it. Notes apps such as Google Keep put the
+        // note's title in the subject: keep it as the first line, so the title can name a new list.
         if (items.Count == 0 && intent.GetStringExtra(Intent.ExtraText) is { Length: > 0 } text)
         {
+            if (intent.GetStringExtra(Intent.ExtraSubject)?.Trim() is { Length: > 0 and <= 100 } subject
+                && !text.TrimStart().StartsWith(subject, StringComparison.Ordinal))
+            {
+                text = subject + "\n\n" + text;
+            }
+
             items.Add(new SharedItem(System.Text.Encoding.UTF8.GetBytes(text[..Math.Min(text.Length, 200_000)]), null, IsText: true));
         }
 
