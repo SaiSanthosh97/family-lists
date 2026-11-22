@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Reading a shop receipt without AI: OCR word boxes → rows → product lines with prices, plus store, date and
+         totals. Also the OCR / barcode / PDF interfaces that Device.Vision implements on Android (from Travel Vault). -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>

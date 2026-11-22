@@ -1,0 +1,29 @@
+<Project>
+  <!-- Central package versions: one place to see and update every dependency.
+       Every package must be MIT / Apache-2.0 / BSD and listed in THIRD-PARTY-NOTICES.md. -->
+  <ItemGroup>
+    <!-- Storage: SQLite with whole-database encryption (SQLite3 Multiple Ciphers, MIT) -->
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.15" />
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3mc" Version="2.1.11" />
+
+    <!-- Android: on-device OCR + barcodes (Google ML Kit, free). Pinned like Use It Before and Travel Vault: newer ML Kit
+         packages need AndroidX libraries newer than .NET MAUI 10 supports (NU1608). -->
+    <PackageVersion Include="Xamarin.Google.MLKit.BarcodeScanning" Version="117.3.0.5" />
+    <PackageVersion Include="Xamarin.Google.MLKit.TextRecognition" Version="116.0.1.5" />
+
+    <!-- Optional bill reading with Claude (official Anthropic C# SDK, Apache-2.0); used only with the user's own key -->
+    <PackageVersion Include="Anthropic" Version="13.10.0" />
+
+    <!-- App -->
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageVersion Include="QRCoder" Version="1.6.0" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.110" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+
+    <!-- Tests -->
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+</Project>

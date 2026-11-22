@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Bills: a receipt read into lines, checked by a person, then confirmed into the month (prices on items, unlisted
+         purchases added for next month); spending by month and product. Rules ported from the web version. -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core.Lists\Core.Lists.csproj" />
+    <ProjectReference Include="..\Core.Receipts\Core.Receipts.csproj" />
+  </ItemGroup>
+
+</Project>

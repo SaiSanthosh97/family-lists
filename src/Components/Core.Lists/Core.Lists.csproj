@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Lists: monthly grocery lists that copy forward, to-do lists, and their items. Use cases + sync handlers.
+         The rollover and name-matching rules are ported from the earlier web version (tested the same way). -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core.Vault\Core.Vault.csproj" />
+  </ItemGroup>
+
+</Project>

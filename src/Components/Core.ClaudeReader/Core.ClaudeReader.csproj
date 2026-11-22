@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Optional bill reader: sends the receipt photo/PDF to Claude with the user's own API key (kept on the phone) and gets
+         structured JSON back. Off unless a key is added in Settings. Uses the official Anthropic C# SDK (Apache-2.0). -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Anthropic" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core.Receipts\Core.Receipts.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- No test calls the real API (that costs money): they check the request pieces and the answer parsing. -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Components/Core.ClaudeReader/Core.ClaudeReader.csproj" />
+  </ItemGroup>
+
+</Project>

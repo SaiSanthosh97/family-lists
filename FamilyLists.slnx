@@ -1,0 +1,36 @@
+<Solution>
+  <Folder Name="/Apps/">
+    <Project Path="src/Apps/FamilyLists.App/FamilyLists.App.csproj" />
+  </Folder>
+  <Folder Name="/Components/">
+    <Project Path="src/Components/Core.AppUpdater/Core.AppUpdater.csproj" />
+    <Project Path="src/Components/Core.Bills/Core.Bills.csproj" />
+    <Project Path="src/Components/Core.ClaudeReader/Core.ClaudeReader.csproj" />
+    <Project Path="src/Components/Core.Common/Core.Common.csproj" />
+    <Project Path="src/Components/Core.Families/Core.Families.csproj" />
+    <Project Path="src/Components/Core.Lists/Core.Lists.csproj" />
+    <Project Path="src/Components/Core.Receipts/Core.Receipts.csproj" />
+    <Project Path="src/Components/Core.Relay/Core.Relay.csproj" />
+    <Project Path="src/Components/Core.Security/Core.Security.csproj" />
+    <Project Path="src/Components/Core.Sync/Core.Sync.csproj" />
+    <Project Path="src/Components/Core.Vault/Core.Vault.csproj" />
+    <Project Path="src/Components/Device.BackgroundWork/Device.BackgroundWork.csproj" />
+    <Project Path="src/Components/Device.Files/Device.Files.csproj" />
+    <Project Path="src/Components/Device.Security/Device.Security.csproj" />
+    <Project Path="src/Components/Device.Vision/Device.Vision.csproj" />
+    <Project Path="src/Components/Storage.Sqlite/Storage.Sqlite.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Core.AppUpdater.Tests/Core.AppUpdater.Tests.csproj" />
+    <Project Path="tests/Core.Bills.Tests/Core.Bills.Tests.csproj" />
+    <Project Path="tests/Core.ClaudeReader.Tests/Core.ClaudeReader.Tests.csproj" />
+    <Project Path="tests/Core.Common.Tests/Core.Common.Tests.csproj" />
+    <Project Path="tests/Core.Families.Tests/Core.Families.Tests.csproj" />
+    <Project Path="tests/Core.Lists.Tests/Core.Lists.Tests.csproj" />
+    <Project Path="tests/Core.Receipts.Tests/Core.Receipts.Tests.csproj" />
+    <Project Path="tests/Core.Relay.Tests/Core.Relay.Tests.csproj" />
+    <Project Path="tests/Core.Security.Tests/Core.Security.Tests.csproj" />
+    <Project Path="tests/Core.Sync.Tests/Core.Sync.Tests.csproj" />
+    <Project Path="tests/Storage.Sqlite.Tests/Storage.Sqlite.Tests.csproj" />
+  </Folder>
+</Solution>

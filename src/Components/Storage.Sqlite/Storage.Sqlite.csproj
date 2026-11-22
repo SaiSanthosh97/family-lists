@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Encrypted on-device database (SQLite3 Multiple Ciphers: the whole file is encrypted). Adapted from Travel Vault. -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3mc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core.Common\Core.Common.csproj" />
+    <ProjectReference Include="..\Core.Families\Core.Families.csproj" />
+    <ProjectReference Include="..\Core.Vault\Core.Vault.csproj" />
+    <ProjectReference Include="..\Core.Sync\Core.Sync.csproj" />
+    <ProjectReference Include="..\Core.Lists\Core.Lists.csproj" />
+    <ProjectReference Include="..\Core.Bills\Core.Bills.csproj" />
+  </ItemGroup>
+
+</Project>
