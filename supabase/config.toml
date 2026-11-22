@@ -1,0 +1,11 @@
+# Supabase CLI settings. The hosted project is chosen with `npx supabase link`.
+project_id = "family-lists"
+
+# Local development only (`npx supabase start`); the hosted project's auth
+# settings are set in the Supabase dashboard.
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/**", "http://127.0.0.1:5173/**", "http://*.localhost:5173/**"]
+
+[functions.parse-bill]
+verify_jwt = true

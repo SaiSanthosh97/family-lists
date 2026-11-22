@@ -1,0 +1,11 @@
+node_modules
+dist
+dev-dist
+.env.local
+.env*.local
+.env
+supabase/functions/.env
+supabase/.temp
+supabase/.branches
+.claude/settings.local.json
+*.log
