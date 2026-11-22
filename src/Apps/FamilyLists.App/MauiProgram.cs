@@ -45,6 +45,8 @@ public static class MauiProgram
         services.AddSingleton<SettingsPage>();
         services.AddTransient<MonthViewModel>();
         services.AddTransient<MonthPage>();
+        services.AddTransient<ExpensesViewModel>();
+        services.AddTransient<ExpensesPage>();
         services.AddTransient<TodoViewModel>();
         services.AddTransient<TodoPage>();
         services.AddTransient<ItemViewModel>();

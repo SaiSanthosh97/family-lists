@@ -1,5 +1,6 @@
 using System.Globalization;
 using FamilyLists.Core.Bills;
+using FamilyLists.Core.Lists;
 
 namespace FamilyLists.App.Services;
 
@@ -42,6 +43,17 @@ public static class Nav
         GoAsync($"month?list={Uri.EscapeDataString(listId)}" + (period is null ? "" : $"&period={period}"));
 
     public static Task TodoAsync(string listId) => GoAsync($"todo?list={Uri.EscapeDataString(listId)}");
+
+    public static Task ExpensesAsync(string listId, string? period = null) =>
+        GoAsync($"expenses?list={Uri.EscapeDataString(listId)}" + (period is null ? "" : $"&period={period}"));
+
+    /// <summary>Opens a list on the screen for its kind.</summary>
+    public static Task ListAsync(Core.Lists.ShoppingList list, string? period = null) => list.Kind switch
+    {
+        Core.Lists.ListKind.Monthly => MonthAsync(list.Id, period),
+        Core.Lists.ListKind.Expenses => ExpensesAsync(list.Id, period),
+        _ => TodoAsync(list.Id),
+    };
 
     public static Task ItemAsync(string itemId) => GoAsync($"item?id={Uri.EscapeDataString(itemId)}");
 
@@ -119,8 +131,11 @@ public static class Display
         return (raw, 1);
     }
 
+    public static (string Name, decimal? Amount) ParseExpense(string text) => Expenses.ParseQuickAdd(text);
+
     public static string SpendSourceText(SpendSource source, int bills) => source switch
     {
+        SpendSource.Expenses => "the month's expenses added up",
         SpendSource.Bills => bills == 1 ? "from 1 bill" : $"from {bills} bills",
         SpendSource.Manual => "entered by hand",
         SpendSource.Items => "from item prices",

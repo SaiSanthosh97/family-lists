@@ -86,6 +86,15 @@ public partial class MonthPage : VaultPage
     }
 }
 
+public partial class ExpensesPage : VaultPage
+{
+    public ExpensesPage(ExpensesViewModel viewModel)
+    {
+        InitializeComponent();
+        BindingContext = viewModel;
+    }
+}
+
 public partial class TodoPage : VaultPage
 {
     public TodoPage(TodoViewModel viewModel)

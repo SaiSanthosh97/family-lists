@@ -38,6 +38,8 @@ A draft stays on the phone that made it. The photo is stored encrypted on that p
 - a per-product breakdown;
 - a product's price history over the months.
 
+For an expense list (TD-02), a month's spend is the sum of its expenses that were due, and the history shows each expense's amount over the months.
+
 `Money` formats amounts in the group's currency; INR uses Indian digit grouping.
 
 ## Tests

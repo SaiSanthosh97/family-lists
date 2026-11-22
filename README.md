@@ -7,6 +7,7 @@ A shared grocery and to-do app for a household. Lists live **on your phones**, s
 - **Bills.** Take a photo of the receipt, or share one in from WhatsApp, Gmail or your files. The phone reads the lines and prices itself (Google ML Kit, offline). Matched items get their price; things you bought that weren't on the list are added, so next month's list includes them. Optionally, Claude can read the bill instead, using **your own** Anthropic API key, which stays on that phone. This is off by default.
 - **Spending is optional.** You get monthly totals, a breakdown per product and price history. No bill? Type the total in, or type a price on an item.
 - **Groups.** Invite by QR code in person, or send an invite text and approve the request after comparing a 6-digit safety code. One phone can be in several groups, and groups can't read each other's data (each has its own key). Removing someone changes the group's key.
+- **Monthly expenses.** Rent, electricity, school fees, EMIs: each has an amount, an optional due day and a *paid* tick. Each month starts with last month's expenses and amounts, so nothing is forgotten, even a month you didn't open. You see what's paid, what's left and what's overdue, and each month's total over time.
 - **To-do lists**, shared inside the same group.
 - **Import from Google Keep, Samsung Notes or any notes app.** Share the note to Family Lists, or copy and paste it. Checkboxes and bullets are cleaned up, quantities read, and you choose which list the items go on.
 

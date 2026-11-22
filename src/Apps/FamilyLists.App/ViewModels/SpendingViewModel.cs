@@ -41,6 +41,12 @@ public sealed partial class SpendingViewModel(VaultHost host) : ObservableObject
     [ObservableProperty]
     public partial bool IsEmpty { get; set; }
 
+    [ObservableProperty]
+    public partial string EmptyText { get; set; } = "No spending yet. Add a bill or type a month's total, and it shows here.";
+
+    [ObservableProperty]
+    public partial string HistoryTitle { get; set; } = "Prices over time";
+
     public ObservableCollection<MonthBar> Bars { get; } = [];
 
     public ObservableCollection<ShareRow> Breakdown { get; } = [];
@@ -62,7 +68,13 @@ public sealed partial class SpendingViewModel(VaultHost host) : ObservableObject
             return;
         }
 
-        Title = $"Spending · {list.Name}";
+        Title = list.Kind == ListKind.Expenses ? $"Month by month · {list.Name}" : $"Spending · {list.Name}";
+        if (list.Kind == ListKind.Expenses)
+        {
+            EmptyText = "No expenses with an amount yet. Add one to a month, and it shows here.";
+            HistoryTitle = "Amounts over time";
+        }
+
         _currency = (await s.Families.GetAsync(list.FamilyId))?.Currency ?? "INR";
         _months = await s.Spending.ForListAsync(_listId);
         var withTotal = _months.Where(m => m.Total is not null).ToList();

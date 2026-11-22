@@ -8,6 +8,9 @@ public enum SpendSource
     Bills,
     Manual,
     Items,
+
+    /// <summary>An expense list: the month's expenses added up.</summary>
+    Expenses,
 }
 
 /// <summary>Money rules (decimal, so sums are exact to the paisa/cent). Ported from the web version.</summary>

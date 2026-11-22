@@ -9,6 +9,7 @@ public partial class AppShell : Shell
         InitializeComponent();
         Routing.RegisterRoute("month", typeof(MonthPage));
         Routing.RegisterRoute("todo", typeof(TodoPage));
+        Routing.RegisterRoute("expenses", typeof(ExpensesPage));
         Routing.RegisterRoute("item", typeof(ItemPage));
         Routing.RegisterRoute("bill", typeof(BillPage));
         Routing.RegisterRoute("spending", typeof(SpendingPage));

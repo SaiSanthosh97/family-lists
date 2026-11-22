@@ -142,6 +142,28 @@ public sealed partial class ItemViewModel(VaultHost host, Dialogs dialogs) : Obs
     public partial bool IsMonthly { get; set; }
 
     [ObservableProperty]
+    public partial bool IsExpense { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasQty { get; set; } = true;
+
+    /// <summary>To-do lists only: monthly and expense lists keep their own order.</summary>
+    [ObservableProperty]
+    public partial bool CanMove { get; set; }
+
+    [ObservableProperty]
+    public partial string DueDay { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool DueThisMonth { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool Paid { get; set; }
+
+    [ObservableProperty]
+    public partial string PageTitle { get; set; } = "Item";
+
+    [ObservableProperty]
     public partial string DeleteText { get; set; } = "Delete";
 
     [ObservableProperty]
@@ -174,11 +196,21 @@ public sealed partial class ItemViewModel(VaultHost host, Dialogs dialogs) : Obs
         Notes = item.Notes ?? "";
         Price = item.Price?.ToString("0.##", CultureInfo.CurrentCulture) ?? "";
         IsMonthly = list.Kind == ListKind.Monthly;
-        PriceLabel = $"Amount spent this month ({currency})";
-        DeleteText = IsMonthly ? "Remove for good" : "Delete";
+        IsExpense = list.Kind == ListKind.Expenses;
+        HasQty = !IsExpense;
+        CanMove = list.Kind == ListKind.Todo;
+        PriceLabel = IsExpense ? $"Amount ({currency})" : $"Amount spent this month ({currency})";
+        DeleteText = IsMonthly ? "Remove for good" : IsExpense ? "Stop this expense" : "Delete";
+        PageTitle = IsExpense ? "Expense" : "Item";
+        DueDay = item.DueDay?.ToString(CultureInfo.CurrentCulture) ?? "";
+        DueThisMonth = item.Included;
+        Paid = item.Bought;
         Source = item.Source switch
         {
             ItemSource.Bill => "Added from a bill.",
+            ItemSource.Carried when IsExpense && item.UnpaidLast => "Copied from last month, where it wasn't marked paid.",
+            ItemSource.Carried when IsExpense && item.SkippedLast => "Copied from last month, where it was skipped.",
+            ItemSource.Carried when IsExpense => "Copied from last month, with its amount. Change it if it's different this month.",
             ItemSource.Carried when item.SkippedLast => "Copied from last month, where it wasn't needed.",
             ItemSource.Carried => "Copied from last month.",
             _ => "",
@@ -196,6 +228,18 @@ public sealed partial class ItemViewModel(VaultHost host, Dialogs dialogs) : Obs
 
         var qty = decimal.TryParse(Qty, NumberStyles.Number, CultureInfo.CurrentCulture, out var q) && q > 0 ? q : 1;
         var price = Money.Parse(Price);
+        int? dueDay = null;
+        if (IsExpense && !string.IsNullOrWhiteSpace(DueDay))
+        {
+            if (!int.TryParse(DueDay.Trim(), NumberStyles.None, CultureInfo.CurrentCulture, out var day) || !Expenses.IsValidDueDay(day))
+            {
+                await dialogs.AlertAsync(PageTitle, "The due day is a day of the month, 1 to 31. Leave it empty if there's no fixed date.");
+                return;
+            }
+
+            dueDay = day;
+        }
+
         try
         {
             await host.Services.Lists.UpdateItemAsync(_id, i =>
@@ -205,6 +249,12 @@ public sealed partial class ItemViewModel(VaultHost host, Dialogs dialogs) : Obs
                 i.Unit = Unit;
                 i.Notes = Notes;
                 i.Price = price;
+                if (IsExpense)
+                {
+                    i.DueDay = dueDay;
+                    i.Included = DueThisMonth;
+                    i.Bought = DueThisMonth && Paid;
+                }
             });
             await Nav.BackAsync();
         }
@@ -217,7 +267,7 @@ public sealed partial class ItemViewModel(VaultHost host, Dialogs dialogs) : Obs
     [RelayCommand]
     private async Task DeleteAsync()
     {
-        var message = IsMonthly ? $"Remove \"{Name}\" for good? It won't be copied to next month." : $"Delete \"{Name}\"?";
+        var message = IsMonthly || IsExpense ? $"Remove \"{Name}\" from this month for good? It won't be copied to next month." : $"Delete \"{Name}\"?";
         if (await dialogs.ConfirmAsync(DeleteText, message, DeleteText))
         {
             await host.Services.Lists.DeleteItemAsync(_id);

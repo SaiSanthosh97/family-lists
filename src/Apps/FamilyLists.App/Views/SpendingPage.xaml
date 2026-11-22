@@ -8,7 +8,7 @@
              Title="{Binding Title}">
     <ScrollView>
         <VerticalStackLayout Padding="16,8,16,32" Spacing="10">
-            <Label Text="No spending yet. Add a bill or type a month's total, and it shows here." IsVisible="{Binding IsEmpty}" Margin="0,16,0,0" />
+            <Label Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}" Margin="0,16,0,0" />
 
             <!-- By month: tap a month to see its breakdown -->
             <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}">
@@ -68,7 +68,7 @@
             </Border>
 
             <!-- Prices over time -->
-            <Label Text="Prices over time" Style="{StaticResource SectionLabel}" IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}" />
+            <Label Text="{Binding HistoryTitle}" Style="{StaticResource SectionLabel}" IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}" />
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding History}" Spacing="8">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="vm:HistoryRow">

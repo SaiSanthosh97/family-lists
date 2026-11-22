@@ -21,6 +21,11 @@ public sealed class SpendingService(IListRepository lists, IBillRepository bills
     {
         var months = await lists.MonthsAsync(listId, ct);
         var items = (await lists.AllItemsAsync(listId, ct)).GroupBy(i => i.MonthId ?? "").ToDictionary(g => g.Key, g => g.ToList());
+        if (await lists.GetListAsync(listId, ct) is { Kind: ListKind.Expenses })
+        {
+            return ExpenseMonths(months, items);
+        }
+
         var allBills = (await bills.BillsOfListAsync(listId, ct)).GroupBy(b => b.MonthId).ToDictionary(g => g.Key, g => g.ToList());
 
         var result = new List<MonthSpending>();
@@ -40,6 +45,20 @@ public sealed class SpendingService(IListRepository lists, IBillRepository bills
 
         return result;
     }
+
+    /// <summary>An expense list's months: each one's total is its expenses that were due (skipped ones left out).</summary>
+    private static List<MonthSpending> ExpenseMonths(IEnumerable<MonthList> months, Dictionary<string, List<ListItem>> items) =>
+        months.Select(month =>
+        {
+            var due = (items.GetValueOrDefault(month.Id) ?? []).Where(i => i.Included && i.Price is not null).ToList();
+            return new MonthSpending(
+                month,
+                due.Count > 0 ? Money.Sum(due.Select(i => i.Price)) : null,
+                due.Count > 0 ? SpendSource.Expenses : SpendSource.None,
+                due,
+                [],
+                []);
+        }).ToList();
 
     /// <summary>Products with a price in at least one month, grouped by name (sizes and plurals ignored), most bought first.</summary>
     public static IReadOnlyList<ProductHistory> History(IEnumerable<MonthSpending> months)

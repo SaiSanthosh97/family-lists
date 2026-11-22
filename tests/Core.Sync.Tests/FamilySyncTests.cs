@@ -182,6 +182,69 @@ public sealed class FamilySyncTests : IDisposable
     }
 
     [Fact]
+    public async Task Expenses_carry_forward_with_amounts_and_paid_ticks_reach_the_other_phone()
+    {
+        var (asha, ravi, group) = await GroupOfTwoAsync();
+        var list = await asha.Lists.CreateListAsync(group.Id, "Home expenses", ListKind.Expenses);
+        var nov = await asha.Lists.StartMonthAsync(list.Id, Nov);
+        var rent = await asha.Lists.AddExpenseAsync(list.Id, nov.Id, "Rent", 15000, dueDay: 5);
+        await asha.Lists.AddExpenseAsync(list.Id, nov.Id, "Internet", 999);
+        await Assert.ThrowsAsync<ListRuleException>(() => asha.Lists.AddExpenseAsync(list.Id, nov.Id, "Bad", 10, dueDay: 40));
+        await Rounds(asha, ravi);
+
+        Assert.Equal(ListKind.Expenses, Assert.Single(await ravi.Lists.ListsAsync(group.Id)).Kind);
+        await ravi.Lists.SetBoughtAsync(rent.Id, true); // Ravi paid the rent
+        await Rounds(ravi, asha);
+        Assert.True((await asha.Lists.ItemAsync(rent.Id))!.Bought);
+
+        // Nobody opened December until the 10th: both phones start it offline and agree.
+        _clock.Set(new DateTimeOffset(2026, 12, 10, 9, 0, 0, TimeSpan.Zero));
+        var a = await asha.Lists.StartMonthAsync(list.Id, Dec);
+        await ravi.Lists.StartMonthAsync(list.Id, Dec);
+        await Rounds(asha, ravi);
+
+        var dec = await ravi.Lists.ItemsAsync(list.Id, a.Id);
+        Assert.Equal(["Rent", "Internet"], dec.Select(i => i.Name));
+        Assert.Equal([(15000m, 5, false, false), (999m, (int?)null, false, true)], dec.Select(i => (i.Price!.Value, i.DueDay, i.Bought, i.UnpaidLast)));
+        Assert.Equal(dec.Select(i => i.Id), (await asha.Lists.ItemsAsync(list.Id, a.Id)).Select(i => i.Id));
+
+        var summary = Expenses.Summarize(dec, Dec, DateOnly.FromDateTime(_clock.UtcNow.UtcDateTime));
+        Assert.Equal((15999m, 0m, 1), (summary.Total, summary.Paid, summary.Overdue)); // rent was due on the 5th
+
+        var history = await asha.Spending.ForListAsync(list.Id);
+        Assert.Equal([(15999m, SpendSource.Expenses), (15999m, SpendSource.Expenses)], history.Select(m => (m.Total!.Value, m.Source)));
+        Assert.Empty(asha.Failures.Concat(ravi.Failures));
+    }
+
+    [Fact]
+    public async Task An_expense_added_to_last_month_late_can_be_brought_into_this_month_once()
+    {
+        var (asha, ravi, group) = await GroupOfTwoAsync();
+        var list = await asha.Lists.CreateListAsync(group.Id, "Home expenses", ListKind.Expenses);
+        var nov = await asha.Lists.StartMonthAsync(list.Id, Nov);
+        await asha.Lists.AddExpenseAsync(list.Id, nov.Id, "Rent", 15000);
+        var dec = await asha.Lists.StartMonthAsync(list.Id, Dec);
+
+        // Remembered later: the school fee also goes on every month, and the water can wasn't needed in December.
+        await asha.Lists.AddExpenseAsync(list.Id, nov.Id, "School fee", 4500, dueDay: 10);
+        await asha.Lists.AddExpenseAsync(list.Id, nov.Id, "Water cans", 300);
+        var (from, missing) = await asha.Lists.MissingFromPreviousAsync(list.Id, Dec);
+        Assert.Equal(Nov, from!.Period);
+        Assert.Equal(["School fee", "Water cans"], missing.Select(m => m.Name));
+
+        await Rounds(asha, ravi);
+        Assert.Equal(2, await asha.Lists.CarryMissingAsync(list.Id, Dec));
+        Assert.Equal(2, await ravi.Lists.CarryMissingAsync(list.Id, Dec)); // Ravi too, before syncing
+        await asha.Lists.DeleteItemAsync((await asha.ItemAsync(list.Id, Dec, "Water cans")).Id);
+        await Rounds(asha, ravi);
+
+        Assert.Equal(["Rent", "School fee"], await ravi.NamesAsync(list.Id, Dec));
+        Assert.Equal(4500m, (await ravi.ItemAsync(list.Id, Dec, "School fee")).Price);
+        Assert.Equal(0, await asha.Lists.CarryMissingAsync(list.Id, Dec)); // removed on purpose: not brought back
+        Assert.Equal(dec.Id, (await ravi.Lists.MonthAsync(list.Id, Dec))!.Id);
+    }
+
+    [Fact]
     public async Task A_remote_join_into_a_big_family_fits_in_one_relay_message()
     {
         // Found with the real ntfy.sh: the approval (group record with every member's keys) was over the ~3.8 KB

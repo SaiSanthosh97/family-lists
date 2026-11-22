@@ -29,6 +29,30 @@ To-do items have no month.
 
 So two phones that start the same month offline produce identical records, and sync has nothing to merge.
 
+## Expense lists (C-012)
+An expense list (`ListKind.Expenses`) has months like a grocery list, and reuses the same records:
+
+| Grocery meaning | Expense meaning |
+|---|---|
+| `Price`: what it cost | the amount |
+| `Bought`: in the cart | paid |
+| `Included` off: not needed | not due this month |
+| — | `DueDay`: day of the month it's due (1–31), optional |
+| `SkippedLast` | turned off last month |
+| — | `UnpaidLast`: due last month, never marked paid |
+
+The month's status (Draft / Final / Shopped) isn't used.
+
+**Starting a month.** `Rollover.BuildExpenseCarryOver` copies every expense from the most recent earlier month (not necessarily the one just before) with its amount, due day and notes, unpaid. Unpaid ones get `UnpaidLast`; ones turned off come back with `SkippedLast`, listed last. Names collapse only when they're the same apart from case and spacing (`Rollover.Key`): "Car loan" and "Car loans" can be two loans, so the product-name rules aren't used. Ids are derived and versions seeded as for groceries (C-002).
+
+**Bringing in what's missing.** `ListService.MissingFromPreviousAsync` / `CarryMissingAsync` copy into a started month what the month before has and it doesn't, e.g. an expense added to October after November was started. They use the same derived ids and seed versions, so two phones doing it end up with one copy. An expense deleted from this month on purpose isn't brought back: its derived id is already there, deleted. The app offers this on expense lists only.
+
+**Numbers.** `Expenses.Summarize` gives total (due this month), paid, left and the overdue count. Overdue means due this month, unpaid and past its due date; a due day past the month's end means its last day; without a due day, only once the month is over. `SpendingService` gives an expense list's months as the sum of their due expenses (source `Expenses`), and each expense's amount over time.
+
+**Quick add.** `Expenses.ParseQuickAdd` reads "Rent 15000", "Electricity ₹1,240.50", "Maid - 3000/-" and "15000 rent". "Vitamin B12" stays a name.
+
+**Sync.** Items with a due day outside 1–31 are refused. A phone on 0.1.x can't read the new list kind, so it refuses the list and keeps its months and items hidden. After updating, it gets the list the next time the list record is sent again: when someone renames it, or when that phone catches up after being away (TD-01). So update every phone before making an expense list.
+
 ## Product names
 `ProductNames` normalises names: lower case, punctuation and unit words removed, singular. It scores similarity by how many words two names share. It is used to match bill lines to list items and to group a product's price history.
 
@@ -54,6 +78,7 @@ Notes apps share plain text. Google Keep writes a checklist as `☐ Milk` / `☑
 `tests/Core.Lists.Tests` covers:
 - periods, including year ends and bad input;
 - rollover: skipped items, bill items, duplicates, and the same keys on every phone;
+- expenses: amounts and due days carried, unpaid and skipped flags, exact-name duplicates, totals, overdue, due days in short months, the add box;
 - name matching, including not forcing a match between unrelated products;
 - notes as Keep, Samsung Notes and other apps share them: titles, checkboxes, bullets, numbering, quantities, commas, duplicates, and empty or huge input.
 

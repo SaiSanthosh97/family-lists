@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<views:VaultPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:FamilyLists.App.Views"
+             xmlns:vm="clr-namespace:FamilyLists.App.ViewModels"
+             x:Class="FamilyLists.App.Views.ExpensesPage"
+             x:DataType="vm:ExpensesViewModel"
+             Title="{Binding Title}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="⋯" Command="{Binding MenuCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ContentPage.Resources>
+        <!-- One expense: the box on the left marks it paid, the rest opens it (amount, due day, notes). -->
+        <DataTemplate x:Key="Row" x:DataType="vm:ItemRow">
+            <Grid ColumnDefinitions="56,*,Auto" Padding="4,2" MinimumHeightRequest="56">
+                <Border WidthRequest="32" HeightRequest="32" StrokeShape="RoundRectangle 8" StrokeThickness="2"
+                        Stroke="{StaticResource Primary}" BackgroundColor="Transparent" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding Checked}" Value="True">
+                            <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                    <Label Text="✓" TextColor="White" FontSize="20" FontFamily="OpenSansSemibold" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding Checked}" />
+                </Border>
+                <BoxView Color="Transparent">
+                    <BoxView.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ToggleCommand, Source={RelativeSource AncestorType={x:Type vm:ExpensesViewModel}}, x:DataType=vm:ExpensesViewModel}" CommandParameter="{Binding .}" />
+                    </BoxView.GestureRecognizers>
+                </BoxView>
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                    <VerticalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:ExpensesViewModel}}, x:DataType=vm:ExpensesViewModel}" CommandParameter="{Binding .}" />
+                    </VerticalStackLayout.GestureRecognizers>
+                    <Label Text="{Binding Name}" />
+                    <Label Text="{Binding Badge}" TextColor="{Binding BadgeColor}" FontSize="14" IsVisible="{Binding Badge, Converter={StaticResource NotEmpty}}" />
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End">
+                    <VerticalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:ExpensesViewModel}}, x:DataType=vm:ExpensesViewModel}" CommandParameter="{Binding .}" />
+                    </VerticalStackLayout.GestureRecognizers>
+                    <Label Text="{Binding Price}" FontSize="16" FontFamily="OpenSansSemibold" HorizontalOptions="End" />
+                    <Label Text="{Binding Detail}" Style="{StaticResource Subtle}" FontSize="14" HorizontalOptions="End" IsVisible="{Binding Detail, Converter={StaticResource NotEmpty}}" />
+                </VerticalStackLayout>
+            </Grid>
+        </DataTemplate>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16,8,16,32" Spacing="10">
+
+            <!-- Month navigator -->
+            <Border Style="{StaticResource Card}" Padding="4">
+                <Grid ColumnDefinitions="56,*,56">
+                    <Button Text="‹" Command="{Binding PreviousCommand}" Style="{StaticResource LinkButton}" FontSize="28" />
+                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Label Text="{Binding PeriodLabel}" FontFamily="OpenSansSemibold" FontSize="20" HorizontalOptions="Center" />
+                        <Label Text="{Binding StatusText}" Style="{StaticResource Subtle}" HorizontalOptions="Center" IsVisible="{Binding StatusText, Converter={StaticResource NotEmpty}}" />
+                    </VerticalStackLayout>
+                    <Button Grid.Column="2" Text="›" Command="{Binding NextCommand}" Style="{StaticResource LinkButton}" FontSize="28" />
+                </Grid>
+            </Border>
+
+            <!-- Not started: copy last month -->
+            <Border Style="{StaticResource Card}" Padding="18" IsVisible="{Binding IsNotStarted}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="{Binding StartTitle}" Style="{StaticResource Heading}" />
+                    <Label Text="{Binding StartText}" />
+                    <Button Text="{Binding StartButton}" Command="{Binding StartCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout IsVisible="{Binding IsStarted}" Spacing="10">
+                <!-- The month in numbers -->
+                <Border Style="{StaticResource Card}" Padding="16">
+                    <VerticalStackLayout Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="This month" Style="{StaticResource Subtle}" />
+                            <Button Grid.Column="1" Text="Month by month ›" Command="{Binding HistoryCommand}" Style="{StaticResource LinkButton}" Padding="0" MinimumHeightRequest="0" />
+                        </Grid>
+                        <Label Text="{Binding TotalText}" FontSize="32" FontFamily="OpenSansSemibold" />
+                        <ProgressBar Progress="{Binding Progress}" ProgressColor="{StaticResource Primary}" />
+                        <Grid ColumnDefinitions="*,*">
+                            <VerticalStackLayout>
+                                <Label Text="Paid" Style="{StaticResource Subtle}" FontSize="14" />
+                                <Label Text="{Binding PaidText}" FontFamily="OpenSansSemibold" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" HorizontalOptions="End">
+                                <Label Text="Left to pay" Style="{StaticResource Subtle}" FontSize="14" HorizontalOptions="End" />
+                                <Label Text="{Binding LeftText}" FontFamily="OpenSansSemibold" HorizontalOptions="End" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Label Text="{Binding OverdueText}" TextColor="{StaticResource Danger}" FontFamily="OpenSansSemibold" IsVisible="{Binding OverdueText, Converter={StaticResource NotEmpty}}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Added to last month after this one started -->
+                <Border Style="{StaticResource Card}" Padding="14" Stroke="{StaticResource Info}" IsVisible="{Binding MissingText, Converter={StaticResource NotEmpty}}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="{Binding MissingText}" />
+                        <Button Text="Bring them in" Command="{Binding BringInCommand}" Style="{StaticResource OutlineButton}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="Tick an expense when it's paid. Everyone in the group sees it." Style="{StaticResource Subtle}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Entry Text="{Binding NewExpense}" Placeholder="Add an expense… (e.g. Rent 15000)" ReturnCommand="{Binding AddCommand}" MaxLength="120" />
+                    <Button Grid.Column="1" Text="Add" Command="{Binding AddCommand}" />
+                </Grid>
+
+                <Label Text="{Binding UnpaidTitle}" Style="{StaticResource SectionLabel}" />
+                <Border Style="{StaticResource Card}" Padding="4">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Unpaid}" BindableLayout.ItemTemplate="{StaticResource Row}">
+                        <BindableLayout.EmptyView>
+                            <Label Text="Nothing left to pay." Style="{StaticResource Subtle}" Padding="16" />
+                        </BindableLayout.EmptyView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <VerticalStackLayout IsVisible="{Binding HasPaid}" Spacing="8">
+                    <Label Text="{Binding PaidTitle}" Style="{StaticResource SectionLabel}" />
+                    <Border Style="{StaticResource Card}" Padding="4">
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Paid}" BindableLayout.ItemTemplate="{StaticResource Row}" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout IsVisible="{Binding HasSkipped}" Spacing="8">
+                    <Label Text="{Binding SkippedTitle}" Style="{StaticResource SectionLabel}" />
+                    <Border Style="{StaticResource Card}" Padding="4">
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Skipped}" BindableLayout.ItemTemplate="{StaticResource Row}" />
+                    </Border>
+                    <Label Text="Not counted this month, but copied to next month. Open one and choose &quot;Stop this expense&quot; to drop it." Style="{StaticResource Subtle}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</views:VaultPage>

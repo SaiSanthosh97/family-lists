@@ -61,7 +61,7 @@ public sealed class ListService(VaultSession session, IListRepository repo, Vaul
     public async Task<MonthList> StartMonthAsync(string listId, string period, CancellationToken ct = default)
     {
         var list = await RequireListAsync(listId, ct);
-        if (list.Kind != ListKind.Monthly)
+        if (!HasMonths(list.Kind))
         {
             throw new ListRuleException("Only monthly lists have months.");
         }
@@ -91,27 +91,7 @@ public sealed class ListService(VaultSession session, IListRepository repo, Vaul
         var items = new List<ListItem>();
         if (await PreviousMonthAsync(listId, period, ct) is { } previous)
         {
-            foreach (var carried in Rollover.BuildCarryOver(await repo.ItemsAsync(listId, previous.Id, ct)))
-            {
-                items.Add(new ListItem
-                {
-                    Id = Ids.Derive("item", month.Id, carried.Key),
-                    FamilyId = list.FamilyId,
-                    ListId = listId,
-                    MonthId = month.Id,
-                    Name = carried.Name,
-                    Qty = carried.Qty,
-                    Unit = carried.Unit,
-                    Notes = carried.Notes,
-                    Source = ItemSource.Carried,
-                    SkippedLast = carried.SkippedLast,
-                    Position = carried.Position,
-                    CreatedAt = session.Now,
-                    Version = Seeds.Version,
-                    UpdatedBy = session.MemberId,
-                    UpdatedAt = session.Now,
-                });
-            }
+            items.AddRange(Rollover.For(list.Kind, await repo.ItemsAsync(listId, previous.Id, ct)).Select(c => Carry(list, month, c)));
         }
 
         await repo.SaveMonthAsync(month, ct);
@@ -124,6 +104,84 @@ public sealed class ListService(VaultSession session, IListRepository repo, Vaul
 
         return month;
     }
+
+    /// <summary>
+    /// What <see cref="CarryMissingAsync"/> would bring in: items of the most recent earlier month that this month
+    /// doesn't have (added there after this month was started, or forgotten).
+    /// </summary>
+    public async Task<(MonthList? From, IReadOnlyList<CarriedItem> Items)> MissingFromPreviousAsync(string listId, string period, CancellationToken ct = default)
+    {
+        var list = await RequireListAsync(listId, ct);
+        if (!HasMonths(list.Kind) || await MonthAsync(listId, period, ct) is not { } month
+            || await PreviousMonthAsync(listId, period, ct) is not { } previous)
+        {
+            return (null, []);
+        }
+
+        var here = (await repo.ItemsAsync(listId, month.Id, ct)).Select(i => Rollover.Key(list.Kind, i.Name)).ToHashSet(StringComparer.Ordinal);
+        var missing = new List<CarriedItem>();
+        foreach (var carried in Rollover.For(list.Kind, await repo.ItemsAsync(listId, previous.Id, ct)))
+        {
+            // Skips one removed from this month on purpose too: its derived id is already here, deleted.
+            if (!here.Contains(carried.Key) && await repo.GetItemAsync(Ids.Derive("item", month.Id, carried.Key), ct) is null)
+            {
+                missing.Add(carried);
+            }
+        }
+
+        return (previous, missing);
+    }
+
+    /// <summary>
+    /// Copies into a month that is already started what the month before it has and it doesn't. Same derived ids and
+    /// seed versions as starting the month, so two phones doing it end up with one copy.
+    /// </summary>
+    /// <returns>How many items were brought in.</returns>
+    public async Task<int> CarryMissingAsync(string listId, string period, CancellationToken ct = default)
+    {
+        var (from, missing) = await MissingFromPreviousAsync(listId, period, ct);
+        if (from is null || missing.Count == 0)
+        {
+            return 0;
+        }
+
+        var list = await RequireListAsync(listId, ct);
+        var month = (await MonthAsync(listId, period, ct))!;
+        var last = (await repo.ItemsAsync(listId, month.Id, ct)).Select(i => i.Position).DefaultIfEmpty(0).Max();
+        var items = missing.Select(c => Carry(list, month, c with { Position = last + c.Position })).ToList();
+        await repo.SaveItemsAsync(items, ct);
+        foreach (var item in items)
+        {
+            await events.PublishAsync(new VaultChange(item.FamilyId, RecordTypes.Item, item.Id), ct);
+        }
+
+        return items.Count;
+    }
+
+    /// <summary>Monthly lists and expense lists have months; to-do lists don't.</summary>
+    public static bool HasMonths(ListKind kind) => kind is ListKind.Monthly or ListKind.Expenses;
+
+    private ListItem Carry(ShoppingList list, MonthList month, CarriedItem carried) => new()
+    {
+        Id = Ids.Derive("item", month.Id, carried.Key),
+        FamilyId = list.FamilyId,
+        ListId = list.Id,
+        MonthId = month.Id,
+        Name = carried.Name,
+        Qty = carried.Qty,
+        Unit = carried.Unit,
+        Notes = carried.Notes,
+        Source = ItemSource.Carried,
+        SkippedLast = carried.SkippedLast,
+        Price = carried.Amount,
+        DueDay = carried.DueDay,
+        UnpaidLast = carried.UnpaidLast,
+        Position = carried.Position,
+        CreatedAt = session.Now,
+        Version = Seeds.Version,
+        UpdatedBy = session.MemberId,
+        UpdatedAt = session.Now,
+    };
 
     public async Task SetStatusAsync(string monthId, MonthStatus status, CancellationToken ct = default)
     {
@@ -159,9 +217,9 @@ public sealed class ListService(VaultSession session, IListRepository repo, Vaul
     public async Task<ListItem> AddItemAsync(string listId, string? monthId, string name, decimal qty = 1, string? unit = null, ItemSource source = ItemSource.Added, CancellationToken ct = default)
     {
         var list = await RequireListAsync(listId, ct);
-        if ((list.Kind == ListKind.Monthly) != (monthId is not null))
+        if (HasMonths(list.Kind) != (monthId is not null))
         {
-            throw new ListRuleException(list.Kind == ListKind.Monthly ? "Choose a month first." : "To-do lists have no months.");
+            throw new ListRuleException(HasMonths(list.Kind) ? "Choose a month first." : "To-do lists have no months.");
         }
 
         if (monthId is not null && (await RequireMonthAsync(monthId, ct)).ListId != listId)
@@ -187,7 +245,29 @@ public sealed class ListService(VaultSession session, IListRepository repo, Vaul
         return item;
     }
 
-    /// <summary>Saves edits made on the item screen (name, quantity, unit, notes, price).</summary>
+    /// <summary>Adds an expense to a month of an expense list, with its amount and due day if known.</summary>
+    public async Task<ListItem> AddExpenseAsync(string listId, string monthId, string name, decimal? amount, int? dueDay = null, CancellationToken ct = default)
+    {
+        if ((await RequireListAsync(listId, ct)).Kind != ListKind.Expenses)
+        {
+            throw new ListRuleException("That isn't an expenses list.");
+        }
+
+        CheckExpense(amount, dueDay);
+        var item = await AddItemAsync(listId, monthId, name, ct: ct);
+        if (amount is not null || dueDay is not null)
+        {
+            await UpdateItemAsync(item.Id, i =>
+            {
+                i.Price = amount;
+                i.DueDay = dueDay;
+            }, ct);
+        }
+
+        return (await ItemAsync(item.Id, ct))!;
+    }
+
+    /// <summary>Saves edits made on the item screen (name, quantity, unit, notes, price, due day).</summary>
     public async Task UpdateItemAsync(string itemId, Action<ListItem> edit, CancellationToken ct = default)
     {
         var item = await RequireItemAsync(itemId, ct);
@@ -201,7 +281,21 @@ public sealed class ListService(VaultSession session, IListRepository repo, Vaul
             throw new ListRuleException("The price can't be negative.");
         }
 
+        CheckExpense(item.Price, item.DueDay);
         await SaveAsync(item, RecordTypes.Item, repo.SaveItemAsync, ct);
+    }
+
+    private static void CheckExpense(decimal? amount, int? dueDay)
+    {
+        if (amount is < 0)
+        {
+            throw new ListRuleException("The amount can't be negative.");
+        }
+
+        if (!Expenses.IsValidDueDay(dueDay))
+        {
+            throw new ListRuleException("The due day is a day of the month, 1 to 31.");
+        }
     }
 
     /// <summary>Reviewing: ticked = needed this month, unticked = not needed.</summary>

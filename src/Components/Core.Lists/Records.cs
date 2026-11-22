@@ -9,6 +9,13 @@ public enum ListKind
 
     /// <summary>A plain shared checklist.</summary>
     Todo,
+
+    /// <summary>
+    /// Household expenses (rent, electricity, school fees): one list per month, copied forward with last month's
+    /// amounts. An item is one expense: <see cref="ListItem.Price"/> is the amount, <see cref="ListItem.Bought"/>
+    /// means paid, and unticking <see cref="ListItem.Included"/> means "not this month".
+    /// </summary>
+    Expenses,
 }
 
 /// <summary>A list in a group ("Groceries", "Weekend chores").</summary>
@@ -106,7 +113,7 @@ public sealed class ListItem : IVersioned
     /// <summary>Needed this month (unticked while reviewing = "not needed").</summary>
     public bool Included { get; set; } = true;
 
-    /// <summary>In the cart (groceries) or done (to-dos).</summary>
+    /// <summary>In the cart (groceries), done (to-dos) or paid (expenses).</summary>
     public bool Bought { get; set; }
 
     public ItemSource Source { get; set; } = ItemSource.Added;
@@ -114,10 +121,16 @@ public sealed class ListItem : IVersioned
     /// <summary>Marked "not needed" last month; still copied, listed last.</summary>
     public bool SkippedLast { get; set; }
 
-    /// <summary>What it cost this month (from the bill, or typed in).</summary>
+    /// <summary>What it cost this month (from the bill, or typed in). Expenses: the amount.</summary>
     public decimal? Price { get; set; }
 
     public int Position { get; set; }
+
+    /// <summary>Expenses: the day of the month it's due (1–31; past the month's end means its last day). Null: no date.</summary>
+    public int? DueDay { get; set; }
+
+    /// <summary>Expenses: copied from a month where it was due but never marked paid.</summary>
+    public bool UnpaidLast { get; set; }
 
     public DateTimeOffset CreatedAt { get; init; }
 

@@ -86,7 +86,7 @@ public static class ListSync
         public async Task<bool> ApplyAsync(string familyId, string id, string payload, CancellationToken ct = default)
         {
             if (Read<ListItem>(payload) is not { } incoming || incoming.Id != id || incoming.FamilyId != familyId
-                || string.IsNullOrWhiteSpace(incoming.Name) || incoming.Name.Length > 200
+                || string.IsNullOrWhiteSpace(incoming.Name) || incoming.Name.Length > 200 || !Expenses.IsValidDueDay(incoming.DueDay)
                 || !await ListInGroupAsync(repo, incoming.ListId, familyId, ct))
             {
                 return false;

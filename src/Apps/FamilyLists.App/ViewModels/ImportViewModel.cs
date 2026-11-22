@@ -75,7 +75,8 @@ public sealed partial class ImportViewModel(VaultHost host, AppSettings settings
 
         Targets.Clear();
         var lists = await host.Services.Lists.ListsAsync(groupId);
-        foreach (var list in lists.OrderBy(l => l.Kind))
+        // Expense lists are left out: a note's lines are things to buy or do, not amounts.
+        foreach (var list in lists.Where(l => l.Kind != ListKind.Expenses).OrderBy(l => l.Kind))
         {
             Targets.Add(new ImportTarget(list.Kind == ListKind.Monthly ? $"{list.Name} (monthly)" : list.Name, list, list.Kind));
         }
