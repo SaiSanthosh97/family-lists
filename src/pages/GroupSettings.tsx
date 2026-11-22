@@ -11,6 +11,7 @@ import {
 } from "../api/groups";
 import { useUserId } from "../lib/auth";
 import { CURRENCIES } from "../lib/currency";
+import { isNativeApp } from "../lib/platform";
 import { Badge, Button, Card, ErrorBox, Field, Header, Input, Page, PageSpinner } from "../components/ui";
 
 export default function GroupSettings() {
@@ -32,16 +33,19 @@ export default function GroupSettings() {
 
   const g = group.data;
   const isOwner = members.data?.some((m) => m.user_id === me && m.role === "owner") ?? false;
-  const link = `${window.location.origin}/join/${g.invite_code}`;
+  // Inside the Android app the page address is internal to the app, so share the code instead of a link.
+  const link = isNativeApp ? null : `${window.location.origin}/join/${g.invite_code}`;
 
   async function share() {
-    const text = `Join "${g.name}" on Family Lists: ${link}`;
+    const text = link
+      ? `Join "${g.name}" on Family Lists: ${link}`
+      : `Join "${g.name}" on Family Lists: open the app, tap "Join a group" and enter the code ${g.invite_code}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: "Join my group", text, url: link });
+        await navigator.share(link ? { title: "Join my group", text, url: link } : { title: "Join my group", text });
         return;
       }
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(link ? link : text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -73,7 +77,7 @@ export default function GroupSettings() {
             <div className="flex items-center justify-between rounded-xl bg-stone-100 px-4 py-3">
               <span className="text-2xl font-bold tracking-[0.3em]">{g.invite_code}</span>
               <Button variant="secondary" onClick={share}>
-                {copied ? "Link copied" : "Share link"}
+                {copied ? "Copied" : link ? "Share link" : "Share code"}
               </Button>
             </div>
           </Card>

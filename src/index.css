@@ -24,12 +24,13 @@ body {
   overscroll-behavior-y: contain;
 }
 
-/* Respect phone notches / home indicator in standalone mode. */
+/* Respect phone notches / home indicator in standalone mode. In the Android app,
+   Capacitor injects --safe-area-inset-* because some WebViews report env() as 0. */
 .safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  padding-bottom: max(var(--safe-area-inset-bottom, env(safe-area-inset-bottom)), 0.75rem);
 }
 .safe-top {
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top));
 }
 
 input,

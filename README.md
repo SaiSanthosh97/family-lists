@@ -100,7 +100,27 @@ The app is a static site, so any free static host works. With [Vercel](https://v
 3. Deep links such as `/join/ABC234` already work because `vercel.json` is included. On another host, add a rule that rewrites every path to `/index.html`.
 4. Add the deployed URL to Supabase's redirect URLs (step 3).
 
-To install it on a phone, open the site and then:
+### Or: the Android app (APK) built on GitHub
+
+Every push to `main` builds an APK with GitHub Actions (`.github/workflows/android.yml`) and publishes it on the repo's **Releases** page.
+
+1. Finish steps 1–2 above (the Supabase project and tables).
+2. In Supabase, open **Authentication → Emails → Templates** and paste in the sign-in code templates, because the app signs in with a 6-digit code from the email:
+   - **Magic Link:** subject `Your Family Lists sign-in code`, body from `supabase/templates/magic_link.html`.
+   - **Confirm signup:** same subject, body from `supabase/templates/confirmation.html`.
+3. On your computer, in this folder, run this once. It asks for the Project URL and public key, creates the app's signing key and starts a build:
+
+   ```
+   powershell -ExecutionPolicy Bypass -File scripts\setup-github.ps1
+   ```
+
+4. After about 5 minutes, on your phone, open the repo's **Releases** page and download the newest `.apk`. Opening it installs or updates the app. The first time, Android asks you to allow installs from your browser.
+
+In the app, sign in with the emailed code. Google sign-in only appears on the website, because Google blocks its sign-in page inside apps. To invite someone, tap **Share code** in group settings; they type the code under **Join a group**.
+
+Back up the `android-signing` folder that the script creates, for example in your password manager. Updates must be signed with the same key. If it's lost, run the script again; then each phone needs to uninstall the app once before installing the new one. Your lists are safe either way, because they're stored in Supabase.
+
+To install the website version on a phone instead, open the site and then:
 
 - **Android / Chrome:** tap ⋮ → **Install app**.
 - **iPhone / Safari:** tap Share → **Add to Home Screen**.
@@ -134,6 +154,7 @@ To install it on a phone, open the site and then:
 | `npm run test:db` | Runs the real migration in an in-process Postgres and checks the privacy rules between groups, joining, leaving and bill confirmation |
 | `npm run typecheck` | TypeScript check |
 | `npm run build` | Production build to `dist/` |
+| `npm run build:android` | Build for the Android app and copy it into `android/` (open that folder in Android Studio to run it on a phone or emulator) |
 
 **Pretending it's next month.** In dev mode, add `?today=2026-12-01` to any URL. The app then behaves as if it's that date for the rest of the browser tab.
 

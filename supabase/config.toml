@@ -7,5 +7,15 @@ project_id = "family-lists"
 site_url = "http://localhost:5173"
 additional_redirect_urls = ["http://localhost:5173/**", "http://127.0.0.1:5173/**", "http://*.localhost:5173/**"]
 
+# Sign-in emails carry a 6-digit code (needed by the Android app) as well as a link.
+# For the hosted project, paste these into Authentication → Emails → Templates.
+[auth.email.template.magic_link]
+subject = "Your Family Lists sign-in code"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.confirmation]
+subject = "Your Family Lists sign-in code"
+content_path = "./supabase/templates/confirmation.html"
+
 [functions.parse-bill]
 verify_jwt = true

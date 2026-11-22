@@ -4,11 +4,14 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
+      // The Android app ships its files inside the APK, so it needs no offline
+      // cache — and a service worker there could keep serving an old version.
+      disable: mode === "android",
       registerType: "autoUpdate",
       includeAssets: ["icon.svg"],
       manifest: {
@@ -35,4 +38,4 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
   },
-});
+}));
