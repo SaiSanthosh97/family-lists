@@ -66,8 +66,12 @@ public static class InviteCodec
 
     /// <summary>Finds and decodes an invite inside any text (the whole pasted message is fine).</summary>
     /// <returns>An <see cref="InPersonInvite"/>, a <see cref="RemoteInvite"/>, or null if none / expired / malformed.</returns>
-    public static object? Decode(string? text, DateTimeOffset now)
+    public static object? Decode(string? text, DateTimeOffset now) => Decode(text, now, out _);
+
+    /// <param name="problem">Why nothing was returned (for the log; contains no secrets), or null on success.</param>
+    public static object? Decode(string? text, DateTimeOffset now, out string? problem)
     {
+        problem = "no invite in the text";
         if (string.IsNullOrWhiteSpace(text))
         {
             return null;
@@ -80,17 +84,20 @@ public static class InviteCodec
                 if (word.StartsWith(InPersonPrefix, StringComparison.Ordinal))
                 {
                     var invite = JsonSerializer.Deserialize<InPersonInvite>(FromBase64Url(word[InPersonPrefix.Length..]), Json);
-                    return invite is not null && invite.ExpiresAt > now && Valid(invite) ? invite : null;
+                    problem = invite is null ? "empty" : invite.ExpiresAt <= now ? $"expired at {invite.ExpiresAt:O} (now {now:O})" : !Valid(invite) ? "fields missing or wrong" : null;
+                    return problem is null ? invite : null;
                 }
 
                 if (word.StartsWith(RemotePrefix, StringComparison.Ordinal))
                 {
                     var invite = JsonSerializer.Deserialize<RemoteInvite>(FromBase64Url(word[RemotePrefix.Length..]), Json);
-                    return invite is not null && invite.ExpiresAt > now && Valid(invite) ? invite : null;
+                    problem = invite is null ? "empty" : invite.ExpiresAt <= now ? $"expired at {invite.ExpiresAt:O} (now {now:O})" : !Valid(invite) ? "fields missing or wrong" : null;
+                    return problem is null ? invite : null;
                 }
             }
-            catch (Exception ex) when (ex is JsonException or FormatException)
+            catch (Exception ex) when (ex is JsonException or FormatException or InvalidOperationException or NotSupportedException)
             {
+                problem = $"{ex.GetType().Name}: {ex.Message}";
                 return null;
             }
         }

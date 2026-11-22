@@ -81,7 +81,10 @@ internal static class Keys
 
     public static string MySeq(string familyId) => $"family.{familyId}.seq";
 
+    /// <summary>Before the replay window: the highest number seen (still read once, as the window's floor).</summary>
     public static string TheirSeq(string familyId, string memberId) => $"family.{familyId}.seq.{memberId}";
+
+    public static string TheirWindow(string familyId, string memberId) => $"family.{familyId}.window.{memberId}";
 
     public static string Seen(string familyId, string memberId) => $"family.{familyId}.seen.{memberId}";
 
@@ -97,6 +100,39 @@ internal static class Keys
 }
 
 public sealed record OldTopic(string Topic, DateTimeOffset Until);
+
+/// <summary>
+/// Replay protection for one sender, as a sliding window (like IPsec's): a message number is accepted once, in any
+/// order, as long as it is above <see cref="Floor"/>. ntfy.sh can return two messages sent in the same second in
+/// either order, so "must be higher than the last one" would throw away the earlier of the two.
+/// </summary>
+public sealed class ReplayWindow
+{
+    public const int Size = 256;
+
+    /// <summary>Everything at or below this number counts as seen.</summary>
+    public long Floor { get; set; }
+
+    public long Max { get; set; }
+
+    /// <summary>Numbers above <see cref="Floor"/> already accepted.</summary>
+    public List<long> Seen { get; set; } = [];
+
+    /// <summary>True (and remembered) when this number hasn't been seen; false for a replay or one too old to tell.</summary>
+    public bool Accept(long seq)
+    {
+        if (seq <= Floor || Seen.Contains(seq))
+        {
+            return false;
+        }
+
+        Seen.Add(seq);
+        Max = Math.Max(Max, seq);
+        Floor = Math.Max(Floor, Max - Size);
+        Seen.RemoveAll(s => s <= Floor);
+        return true;
+    }
+}
 
 /// <summary>An invite this (admin) phone created and still accepts.</summary>
 public sealed record StoredInvite(string InviteId, bool Remote, string? JoinTopic, byte[] JoinSecret, DateTimeOffset ExpiresAt, bool Used = false);

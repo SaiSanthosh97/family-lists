@@ -187,21 +187,37 @@ public sealed partial class FamilySync
     public async Task<List<PendingJoin>> PendingJoinsAsync(string familyId, CancellationToken cancellationToken = default) =>
         await _settings.GetJsonAsync<List<PendingJoin>>(Keys.PendingJoins(familyId), cancellationToken) ?? [];
 
-    /// <summary>Admin approves after comparing the safety code: the member is added and receives the family key.</summary>
+    /// <summary>
+    /// Admin approves after comparing the safety code: the member is added and receives the family key. Safe to
+    /// repeat: if sending the approval failed (no connection), approving again re-sends it to the same member.
+    /// </summary>
     public async Task ApproveJoinAsync(string familyId, string memberId, CancellationToken cancellationToken = default)
     {
         var family = await RequireAdminFamilyAsync(familyId, cancellationToken);
         var pending = await PendingJoinsAsync(familyId, cancellationToken);
         var join = pending.FirstOrDefault(p => p.Member.MemberId == memberId) ?? throw new InvalidOperationException("No such join request.");
-        var invite = (await StoredInvitesAsync(familyId, cancellationToken)).FirstOrDefault(i => i.InviteId == join.InviteId && !i.Used)
-            ?? throw new InvalidOperationException("The invite was already used or has expired.");
+        var invite = (await StoredInvitesAsync(familyId, cancellationToken)).FirstOrDefault(i => i.InviteId == join.InviteId)
+            ?? throw new InvalidOperationException("The invite has expired.");
 
-        await AdmitAsync(family, join.Member, invite, cancellationToken);
-        family = (await _families.GetAsync(familyId, cancellationToken))!;
+        // Admitted by an earlier attempt whose approval never left the phone: only send it again.
+        var alreadyIn = family.Find(memberId) is { IsActive: true } member && member.SigningPublicKey.AsSpan().SequenceEqual(join.Member.Keys.Signing);
+        if (!alreadyIn)
+        {
+            if (invite.Used)
+            {
+                throw new InvalidOperationException("The invite was already used.");
+            }
 
-        var familyChange = await _store.GetChangeAsync(FamilyType, family.Id, cancellationToken);
-        var approval = new JoinApproval(Json(family), family.KeyEpoch, Convert.ToBase64String(await CurrentKeyAsync(family, cancellationToken)), familyChange);
-        var box = RecipientBox.Seal(join.Member.Keys.Agreement, Encoding.UTF8.GetBytes(Json(approval)), "join-ok/" + invite.InviteId);
+            await AdmitAsync(family, join.Member, invite, cancellationToken);
+            family = (await _families.GetAsync(familyId, cancellationToken))!;
+        }
+
+        // The signed group record once (the joiner reads the group from it), compressed: an ntfy.sh message holds
+        // at most ~3.8 KB of text, and a group's member list with everyone's keys is most of that.
+        var familyChange = await _store.GetChangeAsync(FamilyType, family.Id, cancellationToken)
+            ?? SignedChange.Create(FamilyType, family.Id, family.Id, family.Version, Me, Json(family), _session.DeviceKeys);
+        var approval = new JoinApproval(family.KeyEpoch, Convert.ToBase64String(await CurrentKeyAsync(family, cancellationToken)), familyChange);
+        var box = RecipientBox.Seal(join.Member.Keys.Agreement, WireCodec.Gzip(Encoding.UTF8.GetBytes(Json(approval))), "join-ok/" + invite.InviteId);
         await _relays.For(family.RelayServer).PublishAsync(invite.JoinTopic!, $"{JoinApprovedPrefix}{WireCodec.B64(box)}.{WireCodec.B64(_session.DeviceKeys.Sign(box))}", cancellationToken);
 
         pending.RemoveAll(p => p.Member.MemberId == memberId);
@@ -292,22 +308,30 @@ public sealed partial class FamilySync
                 continue;
             }
 
-            var box = WireCodec.FromB64(body[0]);
-            if (!Signatures.Verify(invite.AdminSigningKey, box, WireCodec.FromB64(body[1]))
-                || _session.DeviceKeys.OpenSealed(box, "join-ok/" + invite.InviteId) is not { } opened
-                || FromJson<JoinApproval>(Encoding.UTF8.GetString(opened)) is not { } approval
-                || FromJson<Family>(approval.Family) is not { } family
-                || family.Id != invite.FamilyId || !family.IsActiveMember(Me))
+            JoinApproval? approval;
+            try
+            {
+                var box = WireCodec.FromB64(body[0]);
+                approval = Signatures.Verify(invite.AdminSigningKey, box, WireCodec.FromB64(body[1]))
+                    && _session.DeviceKeys.OpenSealed(box, "join-ok/" + invite.InviteId) is { } opened
+                    ? FromJson<JoinApproval>(Encoding.UTF8.GetString(WireCodec.Gunzip(opened)))
+                    : null;
+            }
+            catch (Exception ex) when (ex is FormatException or InvalidDataException)
+            {
+                continue;
+            }
+
+            if (approval?.FamilyChange is not { } change
+                || FromJson<Family>(change.Payload) is not { } family
+                || family.Id != invite.FamilyId || change.Id != family.Id || !family.IsActiveMember(Me))
             {
                 continue;
             }
 
             await SaveKeyAsync(family.Id, approval.Epoch, Convert.FromBase64String(approval.Key), ct);
             await _families.SaveAsync(family, ct);
-            if (approval.FamilyChange is { } change)
-            {
-                await _store.SaveChangeAsync(change, ct);
-            }
+            await _store.SaveChangeAsync(change, ct);
 
             Tell(family.Id, $"You joined {family.Name}");
             await _events.PublishAsync(new VaultChange(family.Id, FamilyType, family.Id, FromSync: true), ct);
@@ -350,12 +374,41 @@ public sealed partial class FamilySync
         var sealedKeys = family.ActiveMembers
             .Where(m => m.MemberId != Me && m.AgreementPublicKey.Length > 0)
             .ToDictionary(m => m.MemberId, m => Convert.ToBase64String(RecipientBox.Seal(m.AgreementPublicKey, newKey, RekeyLabel(family.Id, family.KeyEpoch))));
+        // Each announcement carries the signed group record and as many members' sealed keys as fit in one relay
+        // message; a big group gets several. A phone acts on the one holding its key and ignores the rest.
         var relay = _relays.For(family.RelayServer);
-        var announcement = await EncodeAsync(family, Kinds.Rekey, new RekeyBody(family.KeyEpoch, family.RelayTopic, sealedKeys, familyChange), ct, oldEpoch, oldKey);
-        await relay.PublishAsync(oldTopic, announcement, ct);
+        foreach (var keys in SplitRekeyKeys(family, familyChange, sealedKeys, oldKey))
+        {
+            var announcement = await EncodeAsync(family, Kinds.Rekey, new RekeyBody(family.KeyEpoch, family.RelayTopic, keys, familyChange), ct, oldEpoch, oldKey);
+            await relay.PublishAsync(oldTopic, announcement, ct);
+        }
 
         await RememberOldTopicAsync(family.Id, oldTopic, ct);
         await _events.PublishAsync(new VaultChange(family.Id, FamilyType, family.Id, FromSync: true), ct);
+    }
+
+    private List<Dictionary<string, string>> SplitRekeyKeys(Family family, SignedChange familyChange, Dictionary<string, string> sealedKeys, byte[] oldKey)
+    {
+        bool Fits(Dictionary<string, string> keys) => WireCodec.Fits(
+            Envelope.Create(family.Id, Me, 9_999_999_999, HybridTimestamp.Zero, Kinds.Rekey, new RekeyBody(family.KeyEpoch, family.RelayTopic, keys, familyChange)),
+            oldKey,
+            _session.DeviceKeys);
+
+        var parts = new List<Dictionary<string, string>>();
+        var current = new Dictionary<string, string>();
+        foreach (var (memberId, key) in sealedKeys)
+        {
+            current[memberId] = key;
+            if (current.Count > 1 && !Fits(current))
+            {
+                current.Remove(memberId);
+                parts.Add(current);
+                current = new Dictionary<string, string> { [memberId] = key };
+            }
+        }
+
+        parts.Add(current); // also when nobody else is left: the announcement still moves this phone's own record
+        return parts;
     }
 
     private async Task HandleRekeyAsync(Cycle ctx, string topic, Member sender, RekeyBody rekey, CancellationToken ct)
@@ -482,5 +535,6 @@ public sealed partial class FamilySync
 
     private sealed record JoinRequest(string InviteId, MemberCard Member, string Proof);
 
-    private sealed record JoinApproval(string Family, int Epoch, string Key, SignedChange? FamilyChange);
+    /// <summary>Sent to an approved joiner, sealed to its device and gzipped. The group is read from the signed change.</summary>
+    private sealed record JoinApproval(int Epoch, string Key, SignedChange FamilyChange);
 }

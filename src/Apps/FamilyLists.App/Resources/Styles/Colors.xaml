@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?xaml-comp compile="true" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Status colours (same values as Use It Before / Travel Vault). Always paired with text. -->
+    <Color x:Key="Danger">#B3261E</Color>
+    <Color x:Key="Expired">#B3261E</Color>
+    <Color x:Key="Warning">#9A4D00</Color>
+    <Color x:Key="Ok">#1E7B34</Color>
+    <Color x:Key="Info">#0B57D0</Color>
+
+    <!-- Family Lists green (the app icon), and the yellow dot. -->
+    <Color x:Key="Primary">#15803D</Color>
+    <Color x:Key="OnPrimary">#FFFFFF</Color>
+    <Color x:Key="PrimaryDark">#86EFAC</Color>
+    <Color x:Key="OnPrimaryDark">#052E16</Color>
+    <Color x:Key="Accent">#FDE047</Color>
+
+    <Color x:Key="PageLight">#FFFFFF</Color>
+    <Color x:Key="PageDark">#0F1411</Color>
+    <Color x:Key="CardLight">#F1F6F2</Color>
+    <Color x:Key="CardDark">#1C241F</Color>
+    <Color x:Key="TextLight">#141A16</Color>
+    <Color x:Key="TextDark">#ECF3EE</Color>
+    <Color x:Key="SubtleTextLight">#3E4A42</Color>
+    <Color x:Key="SubtleTextDark">#B9C7BE</Color>
+    <Color x:Key="BorderLight">#C3CDC6</Color>
+    <Color x:Key="BorderDark">#3B4740</Color>
+
+</ResourceDictionary>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<views:VaultPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:FamilyLists.App.Views"
+             xmlns:vm="clr-namespace:FamilyLists.App.ViewModels"
+             x:Class="FamilyLists.App.Views.ListsPage"
+             x:DataType="vm:ListsViewModel"
+             Title="{Binding GroupName}">
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,8,16,32" Spacing="10">
+
+                <!-- No group yet -->
+                <VerticalStackLayout IsVisible="{Binding HasGroup, Converter={StaticResource Not}}" Spacing="12" Margin="0,24,0,0">
+                    <Label Text="No group yet" Style="{StaticResource Heading}" />
+                    <Label Text="Start a group for your household, or join the group someone invited you to." />
+                    <Button Text="Start a group" Command="{Binding CreateGroupCommand}" />
+                    <Button Text="Join a group" Command="{Binding JoinCommand}" Style="{StaticResource OutlineButton}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout IsVisible="{Binding HasGroup}" Spacing="10">
+                    <Button Text="Switch group ▾" Command="{Binding SwitchGroupCommand}" Style="{StaticResource LinkButton}" HorizontalOptions="Start" IsVisible="{Binding CanSwitch}" />
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding Waiting}" Stroke="{StaticResource Warning}">
+                        <Label Text="Waiting for the person who invited you to let you in. The lists appear once they have." />
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding JoinRequests, Converter={StaticResource Any}}" Stroke="{StaticResource Warning}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ReviewRequestsCommand}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="Someone wants to join this group. Tap to check their code and let them in." FontFamily="OpenSansSemibold" />
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Monthly lists" Style="{StaticResource SectionLabel}" />
+                        <Button Grid.Column="1" Text="+ New" Command="{Binding NewMonthlyCommand}" Style="{StaticResource LinkButton}" VerticalOptions="End" />
+                    </Grid>
+                    <Border Style="{StaticResource Card}" Padding="16" IsVisible="{Binding NoMonthly}">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="Make one for groceries. Each month starts as a copy of last month's list." />
+                            <Button Text="Create a groceries list" Command="{Binding NewMonthlyCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Monthly}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ListRow">
+                                <Border Style="{StaticResource Card}" Padding="16,14">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:ListsViewModel}}, x:DataType=vm:ListsViewModel}" CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="20" VerticalOptions="Center" />
+                                        <Label Grid.Column="1" Text="{Binding Status}" TextColor="{Binding StatusColor}" FontSize="16" FontFamily="OpenSansSemibold" VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="To-do lists" Style="{StaticResource SectionLabel}" />
+                        <Button Grid.Column="1" Text="+ New" Command="{Binding NewTodoCommand}" Style="{StaticResource LinkButton}" VerticalOptions="End" />
+                    </Grid>
+                    <Label Text="For chores, errands, trip packing, anything." Style="{StaticResource Subtle}" IsVisible="{Binding NoTodos}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Todos}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ListRow">
+                                <Border Style="{StaticResource Card}" Padding="16,14">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenCommand, Source={RelativeSource AncestorType={x:Type vm:ListsViewModel}}, x:DataType=vm:ListsViewModel}" CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" FontSize="20" VerticalOptions="Center" />
+                                        <Label Grid.Column="1" Text="{Binding Status}" TextColor="{Binding StatusColor}" FontSize="16" VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</views:VaultPage>

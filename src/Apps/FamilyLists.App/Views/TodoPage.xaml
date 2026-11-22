@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<views:VaultPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:FamilyLists.App.Views"
+             xmlns:vm="clr-namespace:FamilyLists.App.ViewModels"
+             x:Class="FamilyLists.App.Views.TodoPage"
+             x:DataType="vm:TodoViewModel"
+             Title="{Binding Title}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="⋯" Command="{Binding MenuCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ContentPage.Resources>
+        <DataTemplate x:Key="Row" x:DataType="vm:ItemRow">
+            <Grid ColumnDefinitions="56,*,Auto" Padding="4,2" MinimumHeightRequest="56">
+                <Border WidthRequest="32" HeightRequest="32" StrokeShape="RoundRectangle 16" StrokeThickness="2"
+                        Stroke="{StaticResource Primary}" BackgroundColor="Transparent" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding Checked}" Value="True">
+                            <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                    <Label Text="✓" TextColor="White" FontSize="20" FontFamily="OpenSansSemibold" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding Checked}" />
+                </Border>
+                <BoxView Color="Transparent">
+                    <BoxView.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ToggleCommand, Source={RelativeSource AncestorType={x:Type vm:TodoViewModel}}, x:DataType=vm:TodoViewModel}" CommandParameter="{Binding .}" />
+                    </BoxView.GestureRecognizers>
+                </BoxView>
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                    <VerticalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenItemCommand, Source={RelativeSource AncestorType={x:Type vm:TodoViewModel}}, x:DataType=vm:TodoViewModel}" CommandParameter="{Binding .}" />
+                    </VerticalStackLayout.GestureRecognizers>
+                    <Label Text="{Binding Name}" TextDecorations="{Binding Struck, Converter={StaticResource Strike}}" />
+                    <Label Text="{Binding Badge}" Style="{StaticResource Subtle}" FontSize="14" IsVisible="{Binding Badge, Converter={StaticResource NotEmpty}}" />
+                </VerticalStackLayout>
+                <Label Grid.Column="2" Text="{Binding Detail}" Style="{StaticResource Subtle}" VerticalOptions="Center" />
+            </Grid>
+        </DataTemplate>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16,8,16,32" Spacing="10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Entry Text="{Binding NewItem}" Placeholder="Add a task…" ReturnCommand="{Binding AddCommand}" MaxLength="120" />
+                <Button Grid.Column="1" Text="Add" Command="{Binding AddCommand}" />
+            </Grid>
+            <Label Text="Nothing to do. Add the first task above." Style="{StaticResource Subtle}" IsVisible="{Binding IsEmpty}" Margin="0,16,0,0" />
+            <Border Style="{StaticResource Card}" Padding="4" IsVisible="{Binding HasOpen}">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Open}" BindableLayout.ItemTemplate="{StaticResource Row}" />
+            </Border>
+            <VerticalStackLayout IsVisible="{Binding HasDone}" Spacing="8">
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="{Binding DoneTitle}" Style="{StaticResource SectionLabel}" />
+                    <Button Grid.Column="1" Text="Clear done" Command="{Binding ClearDoneCommand}" Style="{StaticResource LinkButton}" VerticalOptions="End" />
+                </Grid>
+                <Border Style="{StaticResource Card}" Padding="4">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Done}" BindableLayout.ItemTemplate="{StaticResource Row}" />
+                </Border>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</views:VaultPage>

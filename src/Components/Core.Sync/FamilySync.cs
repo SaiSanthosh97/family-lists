@@ -248,14 +248,21 @@ public sealed partial class FamilySync : IVaultChangeHandler
             return;
         }
 
-        // Replay protection: every phone numbers its messages; an old number is a replay.
-        var seqKey = Keys.TheirSeq(ctx.Family.Id, envelope.From);
-        if (envelope.Seq <= await _settings.GetLongAsync(seqKey, ct))
+        // Replay protection: every phone numbers its messages, and each number is accepted once (in any order).
+        var windowKey = Keys.TheirWindow(ctx.Family.Id, envelope.From);
+        var window = await _settings.GetJsonAsync<ReplayWindow>(windowKey, ct);
+        if (window is null)
+        {
+            var old = await _settings.GetLongAsync(Keys.TheirSeq(ctx.Family.Id, envelope.From), ct);
+            window = new ReplayWindow { Floor = old, Max = old };
+        }
+
+        if (!window.Accept(envelope.Seq))
         {
             return;
         }
 
-        await _settings.SetLongAsync(seqKey, envelope.Seq, ct);
+        await _settings.SetJsonAsync(windowKey, window, ct);
         await _settings.SetTimeAsync(Keys.Seen(ctx.Family.Id, envelope.From), _session.Now, ct);
         if (HybridTimestamp.TryParse(envelope.Sent, out var sent))
         {

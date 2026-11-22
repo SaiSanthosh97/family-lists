@@ -61,6 +61,27 @@ public class ReceiptParserTests
     }
 
     [Fact]
+    public void Same_size_print_keeps_the_top_row_as_the_shop_and_reads_a_rate_when_the_qty_was_lost()
+    {
+        // Found on the emulator: ML Kit gave the address row (with g's hanging below) a taller box than the shop name
+        // in capitals, and missed the "2" in "Milk 1L  2  33.00  66.00".
+        var shop = new[] { new LayoutWord("FRESH", 20, 10, 70, 30), new LayoutWord("MART", 80, 10, 120, 30), new LayoutWord("SUPERMARKET", 130, 10, 240, 30) };
+        var address = new[] { new LayoutWord("12", 40, 50, 60, 74), new LayoutWord("MG", 68, 50, 88, 74), new LayoutWord("Road,", 96, 50, 146, 74), new LayoutWord("Bengaluru", 154, 50, 244, 74) };
+        var draft = Read(
+            shop,
+            address,
+            Row(100, ("Item", 20), ("Qty", 330), ("Rate", 400), ("Amt", 480)),
+            Row(130, ("Milk 1L", 20), ("33.00", 400), ("66.00", 490)),
+            Row(160, ("Bananas", 20), ("2", 340), ("60.00", 490)),
+            Row(200, ("TOTAL", 20), ("126.00", 480)));
+
+        Assert.Equal("Fresh Mart Supermarket", draft.StoreName);
+        Assert.Equal(
+            [("Milk 1L", 2m, 33m, 66m), ("Bananas", 2m, 30m, 60m)],
+            draft.Lines.Select(l => (l.Name, l.Qty ?? 0, l.UnitPrice ?? 0, l.LineTotal ?? 0)));
+    }
+
+    [Fact]
     public void Joins_a_product_name_to_the_numbers_printed_on_the_row_below()
     {
         var draft = Read(

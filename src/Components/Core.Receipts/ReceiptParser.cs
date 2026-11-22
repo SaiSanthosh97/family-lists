@@ -257,7 +257,8 @@ public static partial class ReceiptParser
                 return (1, total, total); // rate = amount: one of it
             }
 
-            if (IsQuantity(x) && x <= 50 && total > x)
+            // A count is printed without paise: "2 66.00" is qty 2, but "33.00 66.00" is a rate (the qty was lost).
+            if (IsQuantity(x) && x <= 50 && total > x && !numbers[^2].HasCents)
             {
                 return (x, decimal.Round(total / x, 2), total); // "qty amount"
             }
@@ -357,7 +358,10 @@ public static partial class ReceiptParser
         return result.ToString();
     }
 
-    /// <summary>The shop's name: the biggest text above the first product or heading (or the first such row).</summary>
+    /// <summary>
+    /// The shop's name: the first row above the products that is about as big as the biggest one. Not simply the
+    /// tallest: letters like g and y make an address row's box taller than a same-size shop name in capitals.
+    /// </summary>
     private static string? FindStore(IReadOnlyList<Row> rows, int before)
     {
         var candidates = rows.Take(Math.Min(before, 8))
@@ -368,8 +372,9 @@ public static partial class ReceiptParser
             return null;
         }
 
-        var tallest = candidates.MaxBy(r => r.Height)!;
-        var name = CleanName(tallest.Tokens);
+        var tallest = candidates.Max(r => r.Height);
+        var store = candidates.First(r => r.Height >= tallest * 0.8);
+        var name = CleanName(store.Tokens);
         return name.Length is > 0 and <= 60 ? name : null;
     }
 

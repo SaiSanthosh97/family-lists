@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<views:VaultPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:FamilyLists.App.Views"
+             xmlns:vm="clr-namespace:FamilyLists.App.ViewModels"
+             x:Class="FamilyLists.App.Views.SpendingPage"
+             x:DataType="vm:SpendingViewModel"
+             Title="{Binding Title}">
+    <ScrollView>
+        <VerticalStackLayout Padding="16,8,16,32" Spacing="10">
+            <Label Text="No spending yet. Add a bill or type a month's total, and it shows here." IsVisible="{Binding IsEmpty}" Margin="0,16,0,0" />
+
+            <!-- By month: tap a month to see its breakdown -->
+            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}">
+                <Label Text="By month" Style="{StaticResource SectionLabel}" />
+                <Label Grid.Column="1" Text="{Binding Average}" Style="{StaticResource Subtle}" VerticalOptions="End" />
+            </Grid>
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Bars}" Spacing="6">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MonthBar">
+                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" MinimumHeightRequest="40">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding SelectCommand, Source={RelativeSource AncestorType={x:Type vm:SpendingViewModel}}, x:DataType=vm:SpendingViewModel}" CommandParameter="{Binding .}" />
+                            </Grid.GestureRecognizers>
+                            <Label Text="{Binding Label}" FontSize="16" VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding Selected}" Value="True">
+                                        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                            <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                <BoxView WidthRequest="{Binding Width}" HeightRequest="22" CornerRadius="4" Color="{StaticResource Primary}" Opacity="0.55">
+                                    <BoxView.Triggers>
+                                        <DataTrigger TargetType="BoxView" Binding="{Binding Selected}" Value="True">
+                                            <Setter Property="Opacity" Value="1" />
+                                        </DataTrigger>
+                                    </BoxView.Triggers>
+                                </BoxView>
+                                <Label Text="{Binding Amount}" FontSize="15" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Grid>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <!-- The selected month -->
+            <Border Style="{StaticResource Card}" Padding="16" IsVisible="{Binding MonthTitle, Converter={StaticResource NotEmpty}}" Margin="0,8,0,0">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="{Binding MonthTitle}" Style="{StaticResource Subtle}" />
+                    <Label Text="{Binding MonthTotal}" FontSize="30" FontFamily="OpenSansSemibold" />
+                    <Label Text="{Binding MonthSource}" Style="{StaticResource Subtle}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Breakdown}" Spacing="8" Margin="0,8,0,0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ShareRow">
+                                <VerticalStackLayout Spacing="2">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Text="{Binding Name}" FontSize="17" />
+                                        <Label Grid.Column="1" Text="{Binding Amount}" FontSize="17" FontFamily="OpenSansSemibold" />
+                                    </Grid>
+                                    <Label Text="{Binding Detail}" Style="{StaticResource Subtle}" FontSize="14" IsVisible="{Binding Detail, Converter={StaticResource NotEmpty}}" />
+                                    <BoxView WidthRequest="{Binding Width}" HeightRequest="6" CornerRadius="3" Color="{StaticResource Primary}" HorizontalOptions="Start" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Prices over time -->
+            <Label Text="Prices over time" Style="{StaticResource SectionLabel}" IsVisible="{Binding IsEmpty, Converter={StaticResource Not}}" />
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding History}" Spacing="8">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:HistoryRow">
+                        <Border Style="{StaticResource Card}" Padding="12,8">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" />
+                                <Label Text="{Binding Prices}" Style="{StaticResource Subtle}" FontSize="15" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</views:VaultPage>

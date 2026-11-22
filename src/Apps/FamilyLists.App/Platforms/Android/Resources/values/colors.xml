@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same green as Resources/Styles/Colors.xaml; used by Android for the status bar and checkboxes. -->
+    <color name="colorPrimary">#15803D</color>
+    <color name="colorPrimaryDark">#14532D</color>
+    <color name="colorAccent">#15803D</color>
+</resources>

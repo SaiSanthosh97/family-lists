@@ -118,24 +118,38 @@ public sealed partial class NtfyRelay(HttpClient http, Uri server, string userAg
     /// ~45 s. Only "message" events trigger <paramref name="onMessage"/>. With ResponseHeadersRead, HttpClient's
     /// timeout covers only the request, not the long-lived body.
     /// </summary>
-    /// <exception cref="HttpRequestException">No connection or server error.</exception>
+    /// <exception cref="HttpRequestException">No connection, a server error, or nothing heard for <see cref="WatchIdleTimeout"/>.</exception>
     public async Task WatchAsync(string topic, Func<Task> onMessage, CancellationToken cancellationToken = default)
     {
         CheckTopic(topic);
-        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(TopicUrl(topic) + "/json"));
-        AddHeaders(request);
-        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-        while (await reader.ReadLineAsync(cancellationToken) is { } line)
+        // A connection that silently died (phone changed networks) gets no keepalives: give up and let the caller reconnect.
+        using var idle = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        idle.CancelAfter(WatchIdleTimeout);
+        try
         {
-            if (line.Length is > 0 and < 100_000 && Parse(line).Count > 0)
+            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(TopicUrl(topic) + "/json"));
+            AddHeaders(request);
+            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, idle.Token);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync(idle.Token);
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            while (await reader.ReadLineAsync(idle.Token) is { } line)
             {
-                await onMessage();
+                idle.CancelAfter(WatchIdleTimeout);
+                if (line.Length is > 0 and < 100_000 && Parse(line).Count > 0)
+                {
+                    await onMessage();
+                }
             }
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new HttpRequestException("The live connection went quiet.");
+        }
     }
+
+    /// <summary>ntfy sends a keepalive every ~45 s; twice that with nothing means the connection is gone.</summary>
+    public static readonly TimeSpan WatchIdleTimeout = TimeSpan.FromSeconds(100);
 
     /// <summary>Reads ntfy's one-JSON-object-per-line format, keeping only real messages.</summary>
     internal static IReadOnlyList<RelayMessage> Parse(string body)

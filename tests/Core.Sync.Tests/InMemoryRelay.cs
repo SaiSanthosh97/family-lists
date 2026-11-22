@@ -67,6 +67,19 @@ internal sealed class InMemoryRelay(IClock clock) : IRelay, IRelayFactory
         throw new HttpRequestException("The file has expired.");
     }
 
+    /// <summary>
+    /// ntfy.sh orders messages posted in the same second by their (random) id, so the later one can come first.
+    /// Swaps the last two messages of a topic to act that out.
+    /// </summary>
+    public void SwapLastTwo(string topic)
+    {
+        lock (_gate)
+        {
+            var list = _topics[topic];
+            (list[^1], list[^2]) = (list[^2], list[^1]);
+        }
+    }
+
     /// <summary>Everything ever posted to a topic (for attack tests).</summary>
     public IReadOnlyList<RelayMessage> All(string topic)
     {
@@ -79,6 +92,12 @@ internal sealed class InMemoryRelay(IClock clock) : IRelay, IRelayFactory
     private Task<string> Add(string topic, string text, Uri? attachment)
     {
         ThrowIfOffline();
+        // The real client refuses what ntfy.sh would turn into an attachment; so must the fake, or tests miss it.
+        if (text.Length > NtfyRelay.MaxMessageLength)
+        {
+            throw new ArgumentException($"Message of {text.Length} characters is over the relay limit of {NtfyRelay.MaxMessageLength}.");
+        }
+
         lock (_gate)
         {
             var id = (++_nextId).ToString("D8", CultureInfo.InvariantCulture);

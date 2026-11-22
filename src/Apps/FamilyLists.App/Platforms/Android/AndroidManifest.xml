@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+	<!-- No Android cloud backup and no device-to-device copy of app data (a new phone rejoins its groups). HTTPS only. -->
+	<application
+		android:allowBackup="false"
+		android:fullBackupContent="false"
+		android:dataExtractionRules="@xml/data_extraction_rules"
+		android:usesCleartextTraffic="false"
+		android:icon="@mipmap/appicon"
+		android:roundIcon="@mipmap/appicon_round"
+		android:supportsRtl="true"></application>
+
+	<!-- Group sync through the relay, update checks against GitHub Releases, optional bill reading with Claude. -->
+	<uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+	<!-- Background sync keeps running after a restart. -->
+	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+	<!-- In-app updates from GitHub Releases ("Install unknown apps" is asked once). -->
+	<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+	<!-- Bill photos and invite QR codes, read on the phone. Asked only when used. -->
+	<uses-permission android:name="android.permission.CAMERA" />
+	<uses-feature android:name="android.hardware.camera" android:required="false" />
+
+	<queries>
+		<intent>
+			<action android:name="android.media.action.IMAGE_CAPTURE" />
+		</intent>
+	</queries>
+</manifest>

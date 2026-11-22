@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Release signing key lives outside the repository (%USERPROFILE%\.familylists\signing.props). Without it, builds use the debug key. -->
+	<Import Project="$(UserProfile)\.familylists\signing.props" Condition="'$(Configuration)' == 'Release' and Exists('$(UserProfile)\.familylists\signing.props')" />
+
+	<PropertyGroup>
+		<TargetFrameworks>net10.0-android</TargetFrameworks>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>FamilyLists.App</RootNamespace>
+		<AssemblyName>FamilyLists.App</AssemblyName>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+		<ApplicationTitle>Family Lists</ApplicationTitle>
+		<!-- Must never change after the first release, or phones treat updates as a different app. -->
+		<ApplicationId>io.github.saisanthosh97.familylists</ApplicationId>
+
+		<!-- ApplicationDisplayVersion must match the GitHub release tag (v0.1.0) for update checks.
+		     ApplicationVersion must go up by one with every release. -->
+		<ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<SupportedOSPlatformVersion>26.0</SupportedOSPlatformVersion>
+		<!-- Phones are ARM64; -p:EmulatorBuild=true builds the Release app for the x86-64 emulator. -->
+		<RuntimeIdentifiers Condition="'$(Configuration)' == 'Release'">android-arm64</RuntimeIdentifiers>
+		<RuntimeIdentifiers Condition="'$(EmulatorBuild)' == 'true'">android-x64</RuntimeIdentifiers>
+		<AndroidPackageFormats Condition="'$(Configuration)' == 'Release'">apk</AndroidPackageFormats>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#15803D" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#15803D" BaseSize="128,128" />
+		<MauiFont Include="Resources\Fonts\*" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<PackageReference Include="QRCoder" />
+		<PackageReference Include="Microsoft.Maui.Controls" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Components\Core.Sync\Core.Sync.csproj" />
+		<ProjectReference Include="..\..\Components\Core.Bills\Core.Bills.csproj" />
+		<ProjectReference Include="..\..\Components\Core.ClaudeReader\Core.ClaudeReader.csproj" />
+		<ProjectReference Include="..\..\Components\Core.AppUpdater\Core.AppUpdater.csproj" />
+		<ProjectReference Include="..\..\Components\Storage.Sqlite\Storage.Sqlite.csproj" />
+		<ProjectReference Include="..\..\Components\Device.Vision\Device.Vision.csproj" />
+		<ProjectReference Include="..\..\Components\Device.Security\Device.Security.csproj" />
+		<ProjectReference Include="..\..\Components\Device.BackgroundWork\Device.BackgroundWork.csproj" />
+		<ProjectReference Include="..\..\Components\Device.Files\Device.Files.csproj" />
+	</ItemGroup>
+
+</Project>

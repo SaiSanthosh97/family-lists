@@ -223,7 +223,7 @@ public static class WireCodec
         return Convert.FromBase64String(s + new string('=', (4 - s.Length % 4) % 4));
     }
 
-    private static byte[] Gzip(byte[] data)
+    internal static byte[] Gzip(byte[] data)
     {
         using var output = new MemoryStream();
         using (var gzip = new GZipStream(output, CompressionLevel.SmallestSize, leaveOpen: true))
@@ -234,7 +234,7 @@ public static class WireCodec
         return output.ToArray();
     }
 
-    private static byte[] Gunzip(byte[] data)
+    internal static byte[] Gunzip(byte[] data)
     {
         using var input = new GZipStream(new MemoryStream(data), CompressionMode.Decompress);
         using var output = new MemoryStream();

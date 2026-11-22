@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<views:VaultPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:FamilyLists.App.Views"
+             xmlns:vm="clr-namespace:FamilyLists.App.ViewModels"
+             x:Class="FamilyLists.App.Views.BillPage"
+             x:DataType="vm:BillViewModel"
+             Title="{Binding Title}">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16,8,16,24" Spacing="10">
+                <Label Text="{Binding ReadBy}" Style="{StaticResource Subtle}" IsVisible="{Binding ReadBy, Converter={StaticResource NotEmpty}}" />
+
+                <!-- Header -->
+                <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding IsDraft}">
+                    <VerticalStackLayout Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout>
+                                <Label Text="Shop" Style="{StaticResource Subtle}" />
+                                <Entry Text="{Binding StoreName}" MaxLength="60" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1">
+                                <Label Text="Date" Style="{StaticResource Subtle}" />
+                                <DatePicker Date="{Binding BillDate}" Format="d MMM yyyy" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding TotalLabel}" Style="{StaticResource Subtle}" />
+                                <Entry Text="{Binding Total}" Keyboard="Numeric" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1">
+                                <Label Text="Bill discount" Style="{StaticResource Subtle}" />
+                                <Entry Text="{Binding Discount}" Keyboard="Numeric" Placeholder="0" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+                <Label Text="{Binding Summary}" FontFamily="OpenSansSemibold" IsVisible="{Binding IsDraft, Converter={StaticResource Not}}" />
+                <Button Text="View the bill photo" Command="{Binding ViewPhotoCommand}" Style="{StaticResource LinkButton}" HorizontalOptions="Start" IsVisible="{Binding HasPhoto}" />
+
+                <Border Style="{StaticResource Card}" Padding="12" Stroke="{StaticResource Warning}" IsVisible="{Binding HasDifference}">
+                    <Label Text="{Binding Difference}" TextColor="{StaticResource Warning}" FontSize="16" />
+                </Border>
+
+                <Label Text="Lines" Style="{StaticResource SectionLabel}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Lines}" Spacing="8">
+                    <BindableLayout.EmptyView>
+                        <Label Text="No lines were read. Add them yourself, or just keep the total." Style="{StaticResource Subtle}" />
+                    </BindableLayout.EmptyView>
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BillLineRow">
+                            <Border Style="{StaticResource Card}" Padding="12,10">
+                                <Grid>
+                                    <!-- Editable (draft) -->
+                                    <VerticalStackLayout Spacing="4" IsVisible="{Binding Editable}">
+                                        <Grid ColumnDefinitions="*,110" ColumnSpacing="8">
+                                            <Entry Text="{Binding Name}" Placeholder="Product" MaxLength="120" FontFamily="OpenSansSemibold" />
+                                            <Entry Grid.Column="1" Text="{Binding Amount}" Keyboard="Numeric" Placeholder="Amount" HorizontalTextAlignment="End" />
+                                        </Grid>
+                                        <Label Text="{Binding RawText}" FontFamily="monospace" FontSize="13" Style="{StaticResource Subtle}" IsVisible="{Binding RawText, Converter={StaticResource NotEmpty}}" />
+                                        <Grid ColumnDefinitions="80,*,Auto" ColumnSpacing="8">
+                                            <Entry Text="{Binding Qty}" Keyboard="Numeric" Placeholder="Qty" />
+                                            <Picker Grid.Column="1" ItemsSource="{Binding Choices}" SelectedIndex="{Binding Choice}" Title="What is this line?" />
+                                            <Button Grid.Column="2" Text="✕" Style="{StaticResource LinkButton}" TextColor="{StaticResource Danger}"
+                                                    Command="{Binding RemoveLineCommand, Source={RelativeSource AncestorType={x:Type vm:BillViewModel}}, x:DataType=vm:BillViewModel}" CommandParameter="{Binding .}" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                    <!-- Added (read only) -->
+                                    <VerticalStackLayout IsVisible="{Binding ReadOnly}">
+                                        <Label Text="{Binding Name}" FontFamily="OpenSansSemibold" />
+                                        <Label Text="{Binding Summary}" Style="{StaticResource Subtle}" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+                <Button Text="+ Add a line" Command="{Binding AddLineCommand}" Style="{StaticResource LinkButton}" HorizontalOptions="Start" IsVisible="{Binding IsDraft}" />
+                <Label Text="New lines go on the list (and next month's list). Skipped lines count in the total only." Style="{StaticResource Subtle}" IsVisible="{Binding IsDraft}" />
+                <Button Text="Delete bill" Command="{Binding DeleteCommand}" Style="{StaticResource DangerButton}" Margin="0,12,0,0" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="1" StrokeThickness="0" Padding="16,10" BackgroundColor="{AppThemeBinding Light={StaticResource PageLight}, Dark={StaticResource PageDark}}" IsVisible="{Binding IsDraft}">
+            <Button Text="{Binding ConfirmText}" Command="{Binding ConfirmCommand}" />
+        </Border>
+
+        <Grid Grid.RowSpan="2" IsVisible="{Binding IsBusy}" BackgroundColor="#66000000">
+            <ActivityIndicator IsRunning="{Binding IsBusy}" Color="White" VerticalOptions="Center" HorizontalOptions="Center" />
+        </Grid>
+    </Grid>
+</views:VaultPage>

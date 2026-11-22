@@ -182,6 +182,57 @@ public sealed class FamilySyncTests : IDisposable
     }
 
     [Fact]
+    public async Task A_remote_join_into_a_big_family_fits_in_one_relay_message()
+    {
+        // Found with the real ntfy.sh: the approval (group record with every member's keys) was over the ~3.8 KB
+        // message limit already with two long-named members, so it was never sent.
+        var (asha, ravi, group) = await GroupOfTwoAsync();
+        foreach (var name in new[] { "Meenakshi Sundaram", "Venkata Lakshmi Narasimha", "Grandma Saraswathi Devi", "Uncle Ramakrishna Prasad" })
+        {
+            var phone = NewPhone(name);
+            await phone.Sync.JoinInPersonAsync((InPersonInvite)InviteCodec.Decode(InviteCodec.Encode(await asha.Sync.CreateInPersonInviteAsync(group.Id)), _clock.UtcNow)!);
+            await Rounds(asha, phone);
+        }
+
+        var cousin = NewPhone("Cousin Subrahmanyam Iyer");
+        var invite = (RemoteInvite)InviteCodec.Decode(InviteCodec.Encode(await asha.Sync.CreateRemoteInviteAsync(group.Id)), _clock.UtcNow)!;
+        await cousin.Sync.RequestRemoteJoinAsync(invite);
+        await asha.SyncAsync();
+        await asha.Sync.ApproveJoinAsync(group.Id, Assert.Single(await asha.Sync.PendingJoinsAsync(group.Id)).Member.MemberId);
+
+        Assert.Equal(JoinOutcome.Joined, await cousin.Sync.CheckJoinAsync(invite.InviteId));
+        Assert.Equal(7, (await cousin.Families.GetAsync(group.Id))!.ActiveMembers.Count());
+
+        // Removing someone sends the new key to everyone else, with the whole member list: that must fit too.
+        await Rounds(asha, ravi, cousin);
+        await asha.Sync.RemoveMemberAsync(group.Id, ravi.Id);
+        var (list, _) = await GroceriesAsync(asha, group.Id);
+        await Rounds(asha, cousin, ravi);
+        Assert.Equal(["Milk", "Basmati rice 5kg", "Bananas"], await cousin.NamesAsync(list.Id, Nov));
+        Assert.Empty(asha.Failures.Concat(ravi.Failures).Concat(cousin.Failures));
+    }
+
+    [Fact]
+    public async Task Approving_again_after_the_connection_dropped_still_lets_them_in()
+    {
+        var (asha, _, group) = await GroupOfTwoAsync();
+        var meera = NewPhone("Meera");
+        var invite = (RemoteInvite)InviteCodec.Decode(InviteCodec.Encode(await asha.Sync.CreateRemoteInviteAsync(group.Id)), _clock.UtcNow)!;
+        await meera.Sync.RequestRemoteJoinAsync(invite);
+        await asha.SyncAsync();
+        var memberId = Assert.Single(await asha.Sync.PendingJoinsAsync(group.Id)).Member.MemberId;
+
+        _relay.Offline = true;
+        await Assert.ThrowsAsync<HttpRequestException>(() => asha.Sync.ApproveJoinAsync(group.Id, memberId));
+        _relay.Offline = false;
+        Assert.Equal(JoinOutcome.Waiting, await meera.Sync.CheckJoinAsync(invite.InviteId));
+
+        await asha.Sync.ApproveJoinAsync(group.Id, memberId);
+        Assert.Equal(JoinOutcome.Joined, await meera.Sync.CheckJoinAsync(invite.InviteId));
+        Assert.Empty(await asha.Sync.PendingJoinsAsync(group.Id));
+    }
+
+    [Fact]
     public async Task Remote_invite_needs_approval_and_both_phones_show_the_same_safety_code()
     {
         var (asha, ravi, group) = await GroupOfTwoAsync();
@@ -282,6 +333,38 @@ public sealed class FamilySyncTests : IDisposable
         await ravi.SyncAsync(); // gets it
 
         Assert.Equal(["Milk", "Basmati rice 5kg", "Bananas"], await ravi.NamesAsync(list.Id, Nov));
+    }
+
+    [Fact]
+    public async Task Two_messages_the_relay_returns_in_the_wrong_order_are_both_applied()
+    {
+        // Found with the real ntfy.sh: a confirmed bill (one big message) and the month's new status (a small one),
+        // sent in the same second, came back small-first, and the bill was then thrown away as a "replay".
+        var (asha, ravi, group) = await GroupOfTwoAsync();
+        var (list, month) = await GroceriesAsync(asha, group.Id);
+        await Rounds(asha, ravi);
+
+        await asha.Lists.SetBoughtAsync((await asha.ItemAsync(list.Id, Nov, "Milk")).Id, true);
+        await asha.Sync.FlushAsync(group.Id);
+        await asha.Lists.SetStatusAsync(month.Id, MonthStatus.Final);
+        await asha.Sync.FlushAsync(group.Id);
+        _relay.SwapLastTwo(group.RelayTopic);
+        await ravi.SyncAsync();
+
+        Assert.True((await ravi.ItemAsync(list.Id, Nov, "Milk")).Bought);
+        Assert.Equal(MonthStatus.Final, (await ravi.Lists.MonthAsync(list.Id, Nov))!.Status);
+
+        // Each message is still accepted only once.
+        var both = _relay.All(group.RelayTopic).TakeLast(2).ToList();
+        await ravi.Lists.SetBoughtAsync((await ravi.ItemAsync(list.Id, Nov, "Milk")).Id, false);
+        foreach (var message in both)
+        {
+            await _relay.PublishAsync(group.RelayTopic, message.Text);
+        }
+
+        await ravi.SyncAsync();
+        Assert.False((await ravi.ItemAsync(list.Id, Nov, "Milk")).Bought);
+        Assert.Empty(asha.Failures.Concat(ravi.Failures));
     }
 
     [Fact]
